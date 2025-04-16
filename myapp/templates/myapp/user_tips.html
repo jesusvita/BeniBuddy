@@ -89,10 +89,11 @@
   <div class="bg-gray-300 text-[#424B54] p-2 sm:p-4 rounded-lg shadow mt-6 relative text-sm sm:text-base">
     <!-- + Button -->
     <div class="absolute top-2 right-0.5 sm:top-4 sm:right-4">
-      <a href="{% url 'set_pay_cycle' %}" 
-         class="bg-[#880808] text-white px-3 py-1 rounded-full hover:bg-red-900 text-sm shadow">
+      
+      <button id="openPayCycleModalBtn" type="button"
+         class="bg-[#880808] text-white px-3 py-1 rounded-full hover:bg-red-900 text-sm shadow cursor-pointer">
          +
-      </a>
+      </button>
     </div>
 
     <!-- Paycheck Summary -->
@@ -176,6 +177,36 @@
       </form>
   </div>
 </div>
+
+<!-- Edit Pay Cycle Modal -->
+<div id="editPayCycleModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
+      <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-semibold">Set Pay Cycle</h3>
+          <button id="closePayCycleModalBtn" type="button" class="text-gray-500 hover:text-gray-800">&times;</button>
+      </div>
+
+     
+      <form id="editPayCycleForm" method="POST" action="{% url 'set_pay_cycle' %}">
+          {% csrf_token %}
+
+          <div class="mb-4">
+              <label for="payCycleStartDate" class="block text-sm font-medium text-gray-700">Pay Cycle Start Date</label>
+              
+              <input type="date" name="start_date" id="payCycleStartDate" required
+                  value="{{ paycheck_cycle.start_date|date:'Y-m-d'|default:'' }}"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+              <p class="mt-1 text-xs text-gray-500">Select the starting date of your pay cycle.</p>
+          </div>
+
+          <div class="mt-6 flex justify-end">
+              <button type="button" id="cancelPayCycleModalBtn" class="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancel</button>
+              <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-800 hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700">Save Settings</button>
+          </div>
+      </form>
+  </div>
+</div>
+
 
 {% block javascript %}
 <script>
@@ -500,6 +531,141 @@
 
 
   });
+      // --- Get Pay Cycle Modal Elements ---
+      const payCycleModal = document.getElementById('editPayCycleModal');
+    const openPayCycleBtn = document.getElementById('openPayCycleModalBtn');
+    const closePayCycleBtn = document.getElementById('closePayCycleModalBtn');
+    const cancelPayCycleBtn = document.getElementById('cancelPayCycleModalBtn');
+    const payCycleForm = document.getElementById('editPayCycleForm');
+    const payCycleStartDateInput = document.getElementById('payCycleStartDate');
+    const payCycleFrequencyInput = document.getElementById('payCycleFrequency');
+
+    // --- Function to open the Pay Cycle Modal ---
+    function openPayCycleModal() {
+        if (!payCycleModal) return;
+        // Optional: Fetch current settings via AJAX if not pre-filled by Django template
+        // fetch('/url/to/get/current/settings/')
+        // .then(response => response.json())
+        // .then(data => {
+        //     if(data.start_date) payCycleStartDateInput.value = data.start_date;
+        //     if(data.frequency) payCycleFrequencyInput.value = data.frequency;
+        // });
+        payCycleModal.classList.remove('hidden');
+        // payCycleForm.reset(); // Reset if you don't pre-fill
+    }
+
+    // --- Function to close the Pay Cycle Modal ---
+    function closePayCycleModal() {
+        if (!payCycleModal) return;
+        payCycleModal.classList.add('hidden');
+    }
+
+    // --- Event Listeners for Pay Cycle Modal ---
+    if (openPayCycleBtn) {
+        openPayCycleBtn.addEventListener('click', (event) => {
+            event.preventDefault(); // Prevent any default button behavior
+            openPayCycleModal();
+        });
+    } else {
+        console.error('Open Pay Cycle Modal button not found.');
+    }
+
+    if (closePayCycleBtn) {
+        closePayCycleBtn.addEventListener('click', closePayCycleModal);
+    }
+    if (cancelPayCycleBtn) {
+        cancelPayCycleBtn.addEventListener('click', closePayCycleModal);
+    }
+    if (payCycleModal) {
+        payCycleModal.addEventListener('click', (event) => {
+            if (event.target === payCycleModal) { // Click on overlay
+                closePayCycleModal();
+            }
+        });
+    }
+
+    // --- Handle Pay Cycle Form Submission via AJAX ---
+    if (payCycleForm) {
+        payCycleForm.addEventListener('submit', (event) => {
+            event.preventDefault(); // Prevent traditional form submission
+
+            const formData = new FormData(payCycleForm);
+            const url = payCycleForm.action;
+            const csrfTokenInput = payCycleForm.querySelector('input[name="csrfmiddlewaretoken"]');
+
+            if (!csrfTokenInput) {
+                console.error('CSRF token input not found in pay cycle form!');
+                alert('Error: Could not submit form. Security token missing.');
+                return;
+            }
+            const csrfToken = csrfTokenInput.value;
+
+            const submitButton = payCycleForm.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true; // Disable button during request
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest', // Identify as AJAX
+                    'Accept': 'application/json' // Expect JSON response
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Handle validation errors (status 400) or other errors
+                    if (response.status === 400) {
+                        return response.json().then(data => {
+                            throw { validationErrors: data.errors || {'_error': ['Validation failed. Please check the fields.']} }; // Ensure errors exist
+                        });
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json(); // Parse JSON on success (2xx status)
+            })
+            .then(data => {
+                // Assuming backend returns { status: 'success', ... }
+                if (data.status === 'success') {
+                    closePayCycleModal();
+                    // Reload the page to see updated paycheck estimate
+                    location.reload();
+                    // Optional: Show a success message (e.g., using a toast library)
+                    // alert(data.message || 'Pay cycle updated successfully!');
+                } else {
+                    // Handle cases where server returns 2xx but indicates failure in JSON
+                    alert(data.message || 'An unexpected error occurred.');
+                    console.error('Server indicated failure:', data);
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting pay cycle form:', error);
+                if (error.validationErrors) {
+                    // Basic validation error display
+                    let errorMessages = "Please correct the following errors:\n";
+                    for (const field in error.validationErrors) {
+                        // If field is '_error', it's a non-field error
+                        const prefix = field === '_error' ? '' : `${field}: `;
+                        errorMessages += `\n${prefix}${error.validationErrors[field].join(', ')}`;
+                    }
+                    alert(errorMessages);
+                    // TODO: Implement more sophisticated error display next to fields
+                } else {
+                    // Handle network errors or other issues
+                    alert('Could not save pay cycle settings. Please check your connection and try again.');
+                }
+            })
+            .finally(() => {
+                // Re-enable the submit button
+                if (submitButton) submitButton.disabled = false;
+            });
+        });
+    } else {
+        console.error('Edit pay cycle form not found.');
+    }
+
+    // --- END OF PAY CYCLE MODAL JS ---
+
 </script>
 {% endblock %}
 

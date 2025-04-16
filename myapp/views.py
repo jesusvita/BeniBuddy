@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import SignUpForm, TipForm, PaycheckCycleForm
+from .forms import SignUpForm, TipForm, PayCycleForm
 from .models import Tip, PaycheckCycle
 from django.contrib.auth.decorators import login_required
 import calendar
@@ -25,96 +25,132 @@ def signup(request):
     return render(request, 'registration/signup.html', {'form': form})
 
 @login_required
-def set_paycheck_cycle(request):
+def set_pay_cycle(request):
     cycle, created = PaycheckCycle.objects.get_or_create(user=request.user)
 
-    if request.method == "POST":
-        form = PaycheckCycleForm(request.POST, instance=cycle)
+    if request.method == 'POST':
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+        form = PayCycleForm(request.POST) # Form now only has start_date
+
         if form.is_valid():
-            form.save()
-            return redirect('user_tips')  # or wherever you want
+            cycle.start_date = form.cleaned_data['start_date']
+            # --- SET FREQUENCY AUTOMATICALLY ---
+            cycle.frequency = PaycheckCycle.PayFrequency.BIWEEKLY # Use the choice value from model
+            # --- --- --- --- --- --- --- --- ---
+            cycle.save()
+
+            if is_ajax:
+                return JsonResponse({'status': 'success', 'message': 'Pay cycle updated successfully!'})
+            else:
+                return redirect('user_tips')
+        else:
+            if is_ajax:
+                # Errors will now only be for start_date if invalid
+                return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+            else:
+                return redirect('user_tips') # Redirect back on error for non-AJAX
+
+    # --- Handle GET requests ---
+    # (No changes needed here, but ensure it works)
+    is_ajax_get = request.method == 'GET' and request.headers.get('x-requested-with') == 'XMLHttpRequest'
+    if is_ajax_get:
+         # Return current settings (frequency will be whatever is saved, likely 'biweekly')
+         return JsonResponse({
+             'start_date': cycle.start_date.strftime('%Y-%m-%d') if cycle.start_date else None,
+             'frequency': cycle.frequency # Still useful to return if needed elsewhere
+         })
     else:
-        form = PaycheckCycleForm(instance=cycle)
-
-    return render(request, 'myapp/set_cycle.html', {'form': form})
-
+        return redirect('user_tips')
+    
 @login_required
 def user_tips(request, year=None, month=None):
-    # Get the current year and month if not provided
     today = date.today()
-    start_date = today - timedelta(days=14)
-
     if not year or not month:
         year, month = today.year, today.month
 
-    # Ensure month stays within range (1-12)
     month = int(month)
     year = int(year)
 
-    # Handle Previous and Next Month Navigation
+    # --- Month Navigation Logic (remains the same) ---
     if month == 1:
-        prev_month = 12
-        prev_year = year - 1
+        prev_month, prev_year = 12, year - 1
     else:
-        prev_month = month - 1
-        prev_year = year
-
+        prev_month, prev_year = month - 1, year
     if month == 12:
-        next_month = 1
-        next_year = year + 1
+        next_month, next_year = 1, year + 1
     else:
-        next_month = month + 1
-        next_year = year
+        next_month, next_year = month + 1, year
 
-    # Get first and last day of the month
-    first_day = date(year, month, 1)
-    last_day = date(year, month, calendar.monthrange(year, month)[1])
+    # --- Calendar Data Fetching (remains the same) ---
+    first_day_month = date(year, month, 1)
+    last_day_month = date(year, month, calendar.monthrange(year, month)[1])
+    monthly_tips = Tip.objects.filter(user=request.user, date__date__range=[first_day_month, last_day_month]) # Use date__date for DateField comparison
+    total_monthly_tip = monthly_tips.aggregate(Sum('amount'))['amount__sum'] or 0
+    total_monthly_gratuity = monthly_tips.aggregate(Sum('gratuity'))['gratuity__sum'] or 0
+    tip_dict = {tip.date.day: tip for tip in monthly_tips} # Assuming tip.date is DateTimeField
 
-    # Get all tips for the user within the month
-    tips = Tip.objects.filter(user=request.user, date__range=[first_day, last_day])
-
-    # Add all tips for the user within the month 
-    total_monthly_tip = tips.aggregate(Sum('amount'))['amount__sum'] or 0
-    
-    # Add all gratuity for the user within the month
-    total_monthly_gratuity = tips.aggregate(Sum('gratuity'))['gratuity__sum'] or 0
-
-    # Organize tips into a dictionary {day: tip}
-    tip_dict = {tip.date.day: tip for tip in tips}
-
-    # Generate calendar grid
+    # --- Calendar Grid Generation (remains the same) ---
     cal = calendar.Calendar(firstweekday=6)
     weeks = []
     week = []
-
     for day in cal.itermonthdays(year, month):
         if day == 0:
-            week.append(None)  # Empty day for padding
+            week.append(None)
         else:
-            week.append({'day': day, 'tip': tip_dict.get(day)})  # Store tip data
+            current_date_obj = date(year, month, day) # Create date object for comparison
+            # Find tip matching the specific day (handle potential timezones if date is DateTimeField)
+            tip_for_day = None
+            for tip in monthly_tips:
+                 # Compare only the date part
+                 if tip.date.date() == current_date_obj:
+                      tip_for_day = tip
+                      break # Found the tip for this day
+            week.append({'day': day, 'tip': tip_for_day, 'date': current_date_obj.strftime('%Y-%m-%d')}) # Add full date string
 
-        if len(week) == 7:  # End of the week
+        if len(week) == 7:
             weeks.append(week)
             week = []
-
-    if week:  # Add the last incomplete week
+    if week:
         weeks.append(week)
 
-    try:
-        cycle = PaycheckCycle.objects.get(user=request.user)
-        start_date = cycle.start_date
-        end_date = start_date + timedelta(days=13)  # 2-week window
-    except PaycheckCycle.DoesNotExist:
-        start_date = today - timedelta(days=14)
-        end_date = today
-    
-    recent_tips = Tip.objects.filter(user=request.user, date__range=[start_date, end_date])
+    # --- Paycheck Calculation Logic (UPDATED) ---
+    paycheck_cycle, created = PaycheckCycle.objects.get_or_create(user=request.user)
+    paycheck_start_date = None
+    paycheck_end_date = None
+    paycheck_day = None # Estimated day user gets paid
+    recent_total_tip = 0
+    recent_total_gratuity = 0
+    paycheck_total = 0
 
-    total_tip = recent_tips.aggregate(Sum('amount'))['amount__sum'] or 0
-    total_gratuity = recent_tips.aggregate(Sum('gratuity'))['gratuity__sum'] or 0
-    paycheck_total = total_tip + total_gratuity
-    paycheck_day = end_date + timedelta(days=5)
-    return render(request, "myapp/user_tips.html", {
+    if paycheck_cycle.start_date and paycheck_cycle.frequency:
+        paycheck_start_date = paycheck_cycle.start_date
+        # Calculate end date based on frequency
+        if paycheck_cycle.frequency == PaycheckCycle.PayFrequency.WEEKLY:
+            paycheck_end_date = paycheck_start_date + timedelta(days=6)
+            paycheck_day = paycheck_end_date + timedelta(days=5) # Example: paid 5 days after cycle ends
+        elif paycheck_cycle.frequency == PaycheckCycle.PayFrequency.BIWEEKLY:
+            paycheck_end_date = paycheck_start_date + timedelta(days=13)
+            paycheck_day = paycheck_end_date + timedelta(days=5) # Example: paid 5 days after cycle ends
+        # Add logic for other frequencies if implemented
+
+        if paycheck_end_date:
+            # Ensure we filter tips within the calculated range
+            # Use date__date if Tip.date is DateTimeField
+            recent_tips = Tip.objects.filter(
+                user=request.user,
+                date__date__range=[paycheck_start_date, paycheck_end_date]
+            )
+            recent_total_tip = recent_tips.aggregate(Sum('amount'))['amount__sum'] or 0
+            recent_total_gratuity = recent_tips.aggregate(Sum('gratuity'))['gratuity__sum'] or 0
+            paycheck_total = recent_total_tip + recent_total_gratuity
+    else:
+        # Default behavior if cycle is not set (optional)
+        # You could show a message asking the user to set their cycle
+        pass
+
+
+    # --- Pass paycheck_cycle to context ---
+    context = {
         "weeks": weeks,
         "year": year,
         "month": month,
@@ -125,11 +161,15 @@ def user_tips(request, year=None, month=None):
         "next_month": next_month,
         "total_monthly_tip": total_monthly_tip,
         "total_monthly_gratuity": total_monthly_gratuity,
-        "recent_total_tip": total_tip,
-        "recent_total_gratuity": total_gratuity,
+        # Paycheck details
+        "recent_total_tip": recent_total_tip,
+        "recent_total_gratuity": recent_total_gratuity,
         "paycheck_total": paycheck_total,
-        "paycheck_day": paycheck_day,
-    })
+        "paycheck_day": paycheck_day, # Can be None if not calculated
+        "paycheck_cycle": paycheck_cycle, # Pass the object itself
+    }
+    return render(request, "myapp/user_tips.html", context)
+
 @login_required
 def add_tip(request):
     # Handle GET request (for direct access or non-JS fallback)

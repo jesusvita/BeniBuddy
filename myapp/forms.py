@@ -57,13 +57,11 @@ class TipForm(forms.ModelForm):
                      'class': 'hidden' # Ensure it stays hidden
                  })
 
-class PaycheckCycleForm(forms.ModelForm):
-    class Meta:
-        model = PaycheckCycle
-        fields = ['start_date']
-        widgets = {
-            'start_date': forms.DateInput(attrs={
-                'type': 'date',
-                'class': 'w-full p-2 border border-gray-300 rounded mt-1 mb-3'
-            })
-        }
+class PayCycleForm(forms.Form):
+    start_date = forms.DateField(
+        required=True,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm'
+        })
+    )

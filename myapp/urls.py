@@ -10,6 +10,6 @@ urlpatterns = [
     path('edit-tip/<int:tip_id>/', views.edit_tip, name='edit_tip'),
     path('delete-tip/<int:tip_id>/', views.delete_tip, name='delete_tip'),
     path('tips/<int:year>/<int:month>/', views.user_tips, name='user_tips'),
-    path('set-cycle/', views.set_paycheck_cycle, name='set_pay_cycle'),
+    path('set-cycle/', views.set_pay_cycle, name='set_pay_cycle'),
     path('delete-tip/<int:tip_id>/', views.delete_tip, name='delete_tip'),
 ]

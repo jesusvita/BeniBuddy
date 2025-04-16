@@ -5,11 +5,11 @@
 <div class="rounded min-h-screen px-4 py-6 bg-gradient-to-b from-neutral-950 to-stone-900 text-white">
 
   <!-- Header Navigation -->
-  <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+  <div class="flex flex-wrap px-2 sm:px-4 justify-between items-center gap-2 mb-4">
     
     <!-- Previous -->
     <a href="{% url 'user_tips' prev_year prev_month %}"
-       class="font-semibold py-1 px-4 rounded-full shadow transition hover:bg-red-900"
+       class="font-semibold py-0.5 px-2 sm:py-1 sm:px-4 rounded-full shadow transition hover:bg-red-900"
        style="background-color: #880808;">
         <span class="hidden sm:inline">← Previous</span>
         <span class="inline sm:hidden">←</span>
@@ -26,7 +26,7 @@
 
     <!-- Next -->
     <a href="{% url 'user_tips' next_year next_month %}"
-       class="font-semibold py-1 px-4 rounded-full shadow transition hover:bg-red-900"
+       class="font-semibold py-0.5 px-2 sm:py-1 sm:px-4 rounded-full shadow transition hover:bg-red-900"
        style="background-color: #880808;">
        <span class="hidden sm:inline">Next →</span>
         <span class="inline sm:hidden">→</span>
@@ -48,29 +48,37 @@
         <div class="relative transition-transform duration-150 hover:scale-[1.03]">
           {% if day %}
             {% if day.tip %}
-              <a href="{% url 'edit_tip' day.tip.id %}" class="block h-16 rounded-lg p-1 bg-white text-gray-700 shadow hover:bg-gray-100 transition">
+            <a href="{% url 'edit_tip' day.tip.id %}" 
+              data-tip-id="{{ day.tip.id }}" 
+              class="edit-tip-button block h-14 sm:h-16 rounded-lg p-1 bg-white text-gray-700 shadow hover:bg-gray-100 transition cursor-pointer"> 
               {% else %}
-              <a href="{% url 'add_tip' %}?date={{ year }}-{{ month|stringformat:'02d' }}-{{ day.day|stringformat:'02d' }}"
-                 class="block h-16 rounded-lg p-1 bg-white text-gray-700 shadow hover:bg-gray-100 transition">
+              <a href="{% url 'add_tip' %}?date={{ year }}-{{ month|stringformat:'02d' }}-{{ day.day|stringformat:'02d' }}" 
+                 data-date="{{ year }}-{{ month|stringformat:'02d' }}-{{ day.day|stringformat:'02d' }}" 
+                 class="add-tip-button block h-14 sm:h-16 rounded-lg p-1 bg-white text-gray-700 shadow hover:bg-gray-100 transition cursor-pointer">
             {% endif %}
                 <!-- Date Number -->
-                <div class="absolute top-1 left-1 text-xs font-semibold">{{ day.day }}</div>
+                <div class="absolute top-1 left-1 text-[0.6rem] sm:text-xs font-semibold">{{ day.day }}</div>
 
                 <!-- Tip Info -->
-                <div class="flex flex-col justify-center items-center h-full text-sm font-semibold">
+                <div class="flex flex-col justify-center items-center h-full font-semibold pt-3 sm:pt-1">
                   {% if day.tip %}
-                    <div class="text-green-700"> ${{ day.tip.amount }}</div>
+                    <div class="font-sans font-[770] text-green-700 text-[0.65rem] sm:text-xs leading-tight sm:leading-normal tabular-nums"> 
+                        ${{ day.tip.amount }}
+                    </div>
                     {% if day.tip.gratuity %}
-                      <div class="text-xs text-blue-700">${{ day.tip.gratuity }}</div>
+                      <div class="font-sans font-[700] text-blue-700 text-[0.6rem] sm:text-[0.65rem] leading-tight sm:leading-normal tabular-nums"> 
+                          ${{ day.tip.gratuity }}
+                      </div>
                     {% endif %}
                   {% else %}
                     <div class="text-xs text-gray-400 italic"></div>
                   {% endif %}
                 </div>
+
               </a>
           {% else %}
             <!-- Empty box -->
-            <div class="h-16 rounded-lg bg-[#93A8AC] opacity-30"></div>
+            <div class="h-14 sm:h-16 rounded-lg bg-[#93A8AC] opacity-30"></div>
           {% endif %}
         </div>
       {% endfor %}
@@ -78,9 +86,9 @@
   </div>
 
   <!-- Estimated Paycheck Box -->
-  <div class="bg-gray-300 text-[#424B54] p-4 rounded-lg shadow mt-6 relative text-sm sm:text-base">
+  <div class="bg-gray-300 text-[#424B54] p-2 sm:p-4 rounded-lg shadow mt-6 relative text-sm sm:text-base">
     <!-- + Button -->
-    <div class="absolute top-2 right-2 sm:top-4 sm:right-4">
+    <div class="absolute top-2 right-0.5 sm:top-4 sm:right-4">
       <a href="{% url 'set_pay_cycle' %}" 
          class="bg-[#880808] text-white px-3 py-1 rounded-full hover:bg-red-900 text-sm shadow">
          +
@@ -88,10 +96,413 @@
     </div>
 
     <!-- Paycheck Summary -->
-    <h2 class="text-xl font-bold mb-2">Estimated Paycheck for {{ paycheck_day|date:"m-d" }}</h2>
-    <p class="text-green-800 text-lg">Tips: ${{ recent_total_tip|floatformat:2 }}</p>
-    <p class="text-blue-800 text-lg">Gratuity: ${{ recent_total_gratuity|floatformat:2 }}</p>
-    <p class="text-black text-xl mt-2 font-semibold">Total: ${{ paycheck_total|floatformat:2 }}</p>
+    <h2 class="text-xl font-sans font-[770] mb-2">Estimated Paycheck for {{ paycheck_day|date:"m-d" }}</h2>
+    <p class="font-sans font-[770] text-green-800 text-lg">Tips: ${{ recent_total_tip|floatformat:2 }}</p>
+    <p class="font-sans font-[770] text-blue-800 text-lg">Gratuity: ${{ recent_total_gratuity|floatformat:2 }}</p>
+    <p class="font-sans font-[770] text-black text-xl mt-2 font-semibold">Total: ${{ paycheck_total|floatformat:2 }}</p>
   </div>
 </div>
+
+<!-- Add Tip Modal -->
+<div id="addTipModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
+      <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-semibold">Add Tip</h3>
+          <button id="closeModalBtn" type="button" class="text-gray-500 hover:text-gray-800">&times;</button>
+      </div>
+
+      <form id="addTipForm" method="POST" action="{% url 'add_tip' %}"> <!-- Action might point to a dedicated API endpoint -->
+          {% csrf_token %} 
+          <input type="hidden" id="modalTipDate" name="date"> 
+
+          <!-- Your TipForm fields go here -->
+          <!-- Example: -->
+          <div class="mb-4">
+              <label for="modalTipAmount" class="block text-sm font-medium text-gray-700">Amount</label>
+              <input type="number" step="0.01" name="amount" id="modalTipAmount" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+          </div>
+          <div class="mb-4">
+              <label for="modalTipGratuity" class="block text-sm font-medium text-gray-700">Gratuity (If you had any)</label>
+              <input type="number" step="0.01" name="gratuity" id="modalTipGratuity" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+          </div>
+          <!-- Add other fields as needed -->
+
+          <div class="mt-6 flex justify-end">
+              <button type="button" id="cancelModalBtn" class="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancel</button>
+              <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-800 hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700">Save Tip</button>
+          </div>
+      </form>
+  </div>
+</div>
+
+<!-- Edit Tip Modal -->
+<div id="editTipModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
+      <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-semibold">Edit Tip</h3>
+          <button id="closeEditModalBtn" type="button" class="text-gray-500 hover:text-gray-800">&times;</button>
+      </div>
+
+      <form id="editTipForm" method="POST"> <!-- Action URL will be set dynamically by JS -->
+          {% csrf_token %}
+          <!-- Hidden input for the date - might not be editable here, but good to have -->
+          <input type="hidden" id="editModalTipDate" name="date"> 
+          
+          <!-- TipForm fields will be populated by JS -->
+          <div class="mb-4">
+              <label for="editModalTipAmount" class="block text-sm font-medium text-gray-700">Amount</label>
+              <input type="number" step="0.01" name="amount" id="editModalTipAmount" required class="w-full p-2 border border-gray-300 rounded mt-1 mb-3">
+          </div>
+          <div class="mb-4">
+              <label for="editModalTipGratuity" class="block text-sm font-medium text-gray-700">Gratuity</label>
+              <input type="number" step="0.01" name="gratuity" id="editModalTipGratuity" class="w-full p-2 border border-gray-300 rounded mt-1 mb-3">
+          </div>
+          <div class="mb-4">
+              <label for="editModalTipNote" class="block text-sm font-medium text-gray-700">Note (Optional)</label>
+              <textarea name="note" id="editModalTipNote" rows="3" class="w-full p-2 border border-gray-300 rounded"></textarea>
+          </div>
+          <!-- Add other fields if needed -->
+
+          <div class="mt-6 flex justify-between items-center"> 
+              {# Delete Button - Pointing to the original delete URL for now #}
+              {# We might make this AJAX later too, but start simple #}
+              <a href="#" id="deleteTipLink" class="text-red-600 hover:text-red-800 text-sm">Delete Tip</a> 
+              
+              <div> {# Wrap buttons for alignment #}
+                  <button type="button" id="cancelEditModalBtn" class="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancel</button>
+                  <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-800 hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700">Save Changes</button>
+              </div>
+          </div>
+      </form>
+  </div>
+</div>
+
+{% block javascript %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // --- Get modal elements (no changes here) ---
+    const modal = document.getElementById('addTipModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const cancelModalBtn = document.getElementById('cancelModalBtn');
+    const modalTipDateInput = document.getElementById('modalTipDate');
+    const addTipForm = document.getElementById('addTipForm'); // Get the form itself
+
+    // --- Function to open the modal (no changes here) ---
+    function openModal(date) {
+      if (!modal || !modalTipDateInput || !addTipForm) return; 
+      modalTipDateInput.value = date; 
+      modal.classList.remove('hidden'); 
+      addTipForm.reset(); // Reset form fields
+      // Clear previous errors if you implement specific error display later
+      // clearFormErrors(); 
+    }
+
+    // --- Function to close the modal (no changes here) ---
+    function closeModal() {
+      if (!modal) return; 
+      modal.classList.add('hidden'); 
+    }
+
+    // --- Event listeners to open the modal (no changes here) ---
+    const calendarGrid = document.querySelector('.grid.grid-cols-7.sm\\:grid-cols-7'); 
+    if (calendarGrid) {
+        calendarGrid.addEventListener('click', (event) => {
+            const addButton = event.target.closest('.add-tip-button'); 
+            if (addButton) {
+                event.preventDefault(); 
+                const date = addButton.dataset.date; 
+                if (date) {
+                    openModal(date);
+                } else {
+                    console.error('Could not find date on clicked element.');
+                }
+            }
+        });
+    } else {
+        console.error('Calendar grid container not found for event delegation.');
+    }
+
+    // --- Event listeners for closing the modal (no changes here) ---
+    if (closeModalBtn) {
+      closeModalBtn.addEventListener('click', closeModal);
+    }
+    if (cancelModalBtn) {
+      cancelModalBtn.addEventListener('click', closeModal);
+    }
+    if (modal) {
+      modal.addEventListener('click', (event) => {
+        if (event.target === modal) { 
+          closeModal();
+        }
+      });
+    }
+
+    // --- NEW: Handle Form Submission via AJAX ---
+    if (addTipForm) {
+      addTipForm.addEventListener('submit', (event) => {
+        event.preventDefault(); // Prevent traditional form submission
+
+        const formData = new FormData(addTipForm);
+        const url = addTipForm.action; // Get URL from form's action attribute
+        // Find the CSRF token input within the form
+        const csrfTokenInput = addTipForm.querySelector('input[name="csrfmiddlewaretoken"]');
+        
+        if (!csrfTokenInput) {
+            console.error('CSRF token input not found!');
+            alert('Error: Could not submit form. Security token missing.');
+            return; // Stop submission if token is missing
+        }
+        const csrfToken = csrfTokenInput.value;
+
+
+        // Optional: Add loading state indication (e.g., disable button)
+        const submitButton = addTipForm.querySelector('button[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
+
+
+        fetch(url, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            // Important: Let browser set Content-Type for FormData
+            'X-CSRFToken': csrfToken, // Add CSRF token header
+            'X-Requested-With': 'XMLHttpRequest', // Standard header for AJAX detection
+          },
+        })
+        .then(response => {
+            // Check if the response status indicates an issue (like validation error 400)
+            if (!response.ok) {
+                // If status is 400, likely validation errors, try to parse JSON
+                if (response.status === 400) {
+                    return response.json().then(data => {
+                        // Throw an error object containing the validation errors
+                        throw { validationErrors: data.errors }; 
+                    });
+                }
+                // Otherwise, throw a generic error for other HTTP issues
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            // If response is OK (e.g., 200), parse the JSON body
+            return response.json(); 
+        })
+        .then(data => {
+          // Assuming Django returns { status: 'success', ... } on success
+          if (data.status === 'success') {
+            closeModal();
+            // Easiest way to see the change: reload the page
+            location.reload(); 
+            // More advanced: Update the specific calendar cell dynamically here
+          } else {
+            // Handle cases where the server returns 200 OK but indicates failure in JSON
+            // (This shouldn't happen if using HTTP 400 for errors, but good to have)
+            alert(data.message || 'An unexpected error occurred.');
+            console.error('Server indicated failure:', data);
+          }
+        })
+        .catch(error => {
+          console.error('Error submitting form:', error);
+          if (error.validationErrors) {
+            // Handle validation errors (simple alert for now)
+            let errorMessages = "Please correct the following errors:\n";
+            for (const field in error.validationErrors) {
+              errorMessages += `\n${field}: ${error.validationErrors[field].join(', ')}`;
+            }
+            alert(errorMessages);
+            // More advanced: Display errors next to form fields here
+          } else {
+            // Handle network errors or other issues
+            alert('Could not save tip. Please check your connection and try again.');
+          }
+        })
+        .finally(() => {
+            // Re-enable the submit button regardless of success or failure
+            if (submitButton) submitButton.disabled = false;
+        });
+      });
+    } else {
+        console.error('Add tip form not found.');
+    }
+
+      // --- Get Edit Modal Elements ---
+  const editModal = document.getElementById('editTipModal');
+  const closeEditModalBtn = document.getElementById('closeEditModalBtn');
+  const cancelEditModalBtn = document.getElementById('cancelEditModalBtn');
+  const editTipForm = document.getElementById('editTipForm');
+  const editModalTipDateInput = document.getElementById('editModalTipDate');
+  const editModalTipAmountInput = document.getElementById('editModalTipAmount');
+  const editModalTipGratuityInput = document.getElementById('editModalTipGratuity');
+  const editModalTipNoteInput = document.getElementById('editModalTipNote');
+  const deleteTipLink = document.getElementById('deleteTipLink'); // Get delete link
+
+  // --- Function to open the Edit Modal ---
+  function openEditModal(tipData) {
+    if (!editModal || !editTipForm) return;
+
+    // Populate form fields
+    editModalTipDateInput.value = tipData.date.split('T')[0]; // Get YYYY-MM-DD part if DateTimeField
+    editModalTipAmountInput.value = tipData.amount;
+    editModalTipGratuityInput.value = tipData.gratuity;
+    editModalTipNoteInput.value = tipData.note || ''; // Handle null notes
+
+    // Set the form's action URL dynamically
+    const editUrl = `/edit-tip/${tipData.id}/`; // Construct the URL
+    editTipForm.action = editUrl;
+
+    // Set the delete link URL
+    const deleteUrl = `/delete-tip/${tipData.id}/`;
+    deleteTipLink.href = deleteUrl; 
+
+    editModal.classList.remove('hidden'); // Show the modal
+  }
+
+  // --- Function to close the Edit Modal ---
+  function closeEditModal() {
+    if (!editModal) return;
+    editModal.classList.add('hidden');
+  }
+
+  // --- Modify Event Delegation on Calendar Grid ---
+  // The existing listener needs to handle BOTH add and edit buttons
+  if (calendarGrid) {
+      calendarGrid.addEventListener('click', (event) => {
+          const addButton = event.target.closest('.add-tip-button');
+          const editButton = event.target.closest('.edit-tip-button'); // Check for edit button
+
+          if (addButton) {
+              event.preventDefault(); 
+              const date = addButton.dataset.date; 
+              if (date) {
+                  openModal(date); // Call original openModal
+              } else {
+                  console.error('Could not find date on add button.');
+              }
+          } else if (editButton) { // Handle edit button click
+              event.preventDefault();
+              const tipId = editButton.dataset.tipId;
+              if (tipId) {
+                  // Fetch existing tip data via AJAX GET
+                  fetch(`/edit-tip/${tipId}/`, { // Use the edit URL for GET too
+                      method: 'GET',
+                      headers: {
+                          'X-Requested-With': 'XMLHttpRequest', // Identify as AJAX
+                          'Accept': 'application/json' // Ask for JSON response
+                      }
+                  })
+                  .then(response => {
+                      if (!response.ok) {
+                          throw new Error(`HTTP error! status: ${response.status}`);
+                      }
+                      return response.json();
+                  })
+                  .then(data => {
+                      if (data.tip) { // Check if backend returned tip data
+                          openEditModal(data.tip); // Pass fetched data to open function
+                      } else {
+                          console.error('Tip data not found in response:', data);
+                          alert('Error: Could not load tip details.');
+                      }
+                  })
+                  .catch(error => {
+                      console.error('Error fetching tip data:', error);
+                      alert('Error: Could not load tip details. Please try again.');
+                  });
+              } else {
+                  console.error('Could not find tip ID on edit button.');
+              }
+          }
+      });
+  } else {
+      console.error('Calendar grid container not found for event delegation.');
+  }
+
+  // --- Add event listeners for closing the Edit Modal ---
+  if (closeEditModalBtn) {
+    closeEditModalBtn.addEventListener('click', closeEditModal);
+  }
+  if (cancelEditModalBtn) {
+    cancelEditModalBtn.addEventListener('click', closeEditModal);
+  }
+  if (editModal) {
+    editModal.addEventListener('click', (event) => {
+      if (event.target === editModal) {
+        closeEditModal();
+      }
+    });
+  }
+
+  // --- Handle Edit Form Submission via AJAX ---
+  if (editTipForm) {
+    editTipForm.addEventListener('submit', (event) => {
+      event.preventDefault(); // Prevent traditional submission
+
+      const formData = new FormData(editTipForm);
+      const url = editTipForm.action; // Get URL from form's action (set dynamically)
+      const csrfTokenInput = editTipForm.querySelector('input[name="csrfmiddlewaretoken"]');
+      
+      if (!csrfTokenInput) {
+          console.error('CSRF token input not found in edit form!');
+          alert('Error: Could not submit form. Security token missing.');
+          return; 
+      }
+      const csrfToken = csrfTokenInput.value;
+
+      const submitButton = editTipForm.querySelector('button[type="submit"]');
+      if (submitButton) submitButton.disabled = true;
+
+      fetch(url, { // URL already includes tip_id
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': csrfToken,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      })
+      .then(response => {
+          if (!response.ok) {
+              if (response.status === 400) {
+                  return response.json().then(data => {
+                      throw { validationErrors: data.errors }; 
+                  });
+              }
+              throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json(); 
+      })
+      .then(data => {
+        if (data.status === 'success') {
+          closeEditModal();
+          location.reload(); // Reload page to see changes
+        } else {
+          alert(data.message || 'An unexpected error occurred while saving.');
+          console.error('Server indicated failure:', data);
+        }
+      })
+      .catch(error => {
+        console.error('Error submitting edit form:', error);
+        if (error.validationErrors) {
+          let errorMessages = "Please correct the following errors:\n";
+          for (const field in error.validationErrors) {
+            errorMessages += `\n${field}: ${error.validationErrors[field].join(', ')}`;
+          }
+          alert(errorMessages);
+          // Add logic here to display errors next to fields if desired
+        } else {
+          alert('Could not save changes. Please check your connection and try again.');
+        }
+      })
+      .finally(() => {
+          if (submitButton) submitButton.disabled = false;
+      });
+    });
+  } else {
+      console.error('Edit tip form not found.');
+  }
+
+
+  });
+</script>
+{% endblock %}
+
+
+
 {% endblock %}

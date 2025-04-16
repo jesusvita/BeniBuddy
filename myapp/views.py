@@ -5,6 +5,8 @@ from django.contrib.auth.decorators import login_required
 import calendar
 from datetime import date, timedelta, datetime
 from django.db.models import Sum
+from django.http import JsonResponse
+from django.forms.models import model_to_dict
 
 def home(request):
     if request.user.is_authenticated:
@@ -130,54 +132,121 @@ def user_tips(request, year=None, month=None):
     })
 @login_required
 def add_tip(request):
-    # Get date from query string
-    date_str = request.GET.get('date')
-    initial_data = {}
-    
-    if date_str:
-        try:
-            initial_data['date'] = datetime.strptime(date_str, "%Y-%m-%d").date()
-        except ValueError:
-            pass  # fallback to blank if format is off
+    # Handle GET request (for direct access or non-JS fallback)
+    if request.method == 'GET':
+        # Pre-fill date from query parameter if provided (for modal or direct link)
+        initial_data = {}
+        date_str = request.GET.get('date')
+        if date_str:
+            try:
+                initial_data['date'] = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                pass # Ignore invalid date format
+        
+        form = TipForm(initial=initial_data)
+        # Render the full page template if accessed directly via GET
+        return render(request, 'myapp/add_tip_form.html', {'form': form}) # Or wherever your full form page is
 
-    if request.method == "POST":
+    # Handle POST request (from modal AJAX or direct form submission)
+    elif request.method == 'POST':
         form = TipForm(request.POST)
+        
+        # Check if it's an AJAX request
+        is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
         if form.is_valid():
             tip = form.save(commit=False)
-            tip.user = request.user
-            tip.date = initial_data['date']
+            tip.user = request.user # Associate tip with logged-in user
             tip.save()
-            return redirect('user_tips')
-    else:
-        form = TipForm(initial=initial_data)
+            
+            if is_ajax:
+                # Return JSON success response for AJAX
+                return JsonResponse({'status': 'success', 'message': 'Tip added successfully!'})
+            else:
+                # Redirect for traditional form submission
+                # Redirect back to the calendar view for the month the tip was added to
+                tip_date = form.cleaned_data.get('date')
+                if tip_date:
+                    return redirect('user_tips', year=tip_date.year, month=tip_date.month)
+                else:
+                    return redirect('user_tips_current') # Or some default view
 
-    return render(request, "myapp/add_tip.html", {"form": form})
+        else: # Form is invalid
+            if is_ajax:
+                # Return JSON error response with form errors for AJAX
+                return JsonResponse({'status': 'error', 'errors': form.errors}, status=400) # Use 400 status code
+            else:
+                # Re-render the full form page with errors for traditional submission
+                # You might need to pass the original date back if needed
+                return render(request, 'myapp/add_tip_form.html', {'form': form}) 
+
+    # Handle other methods if necessary (optional)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
 
 @login_required
 def edit_tip(request, tip_id):
     tip = get_object_or_404(Tip, id=tip_id, user=request.user)  # Ensure the user owns this tip
-    
-    if request.method == "POST":
+    is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
+
+    if request.method == "GET":
+        if is_ajax:
+            # For AJAX GET, return tip data as JSON
+            # Use model_to_dict but be careful about sensitive fields if any
+            # Convert Decimal to string for JSON compatibility
+            tip_data = model_to_dict(tip, fields=['id', 'amount', 'gratuity', 'date', 'note'])
+            tip_data['amount'] = str(tip_data['amount']) # Convert Decimal
+            tip_data['gratuity'] = str(tip_data['gratuity']) # Convert Decimal
+            # Format date/datetime as needed by the frontend input (YYYY-MM-DD)
+            if isinstance(tip_data['date'], datetime):
+                 tip_data['date'] = tip_data['date'].strftime('%Y-%m-%dT%H:%M:%S') # ISO format often useful
+            elif isinstance(tip_data['date'], date):
+                 tip_data['date'] = tip_data['date'].strftime('%Y-%m-%d')
+
+            return JsonResponse({'tip': tip_data})
+        else:
+            # For standard GET, render the edit form page
+            form = TipForm(instance=tip)
+            return render(request, 'myapp/edit_tip.html', {'form': form, 'tip': tip})
+
+    elif request.method == "POST":
         form = TipForm(request.POST, instance=tip)
         if form.is_valid():
             form.save()
-            return redirect('user_tips')  # Redirect back to tips page after editing
-    else:
-        form = TipForm(instance=tip)  # Pre-fill the form with existing tip data
+            if is_ajax:
+                # For AJAX POST success, return JSON
+                return JsonResponse({'status': 'success', 'message': 'Tip updated successfully!'})
+            else:
+                # For standard POST success, redirect
+                tip_date = form.cleaned_data.get('date')
+                if tip_date:
+                    return redirect('user_tips', year=tip_date.year, month=tip_date.month)
+                else:
+                    # Find the month/year from the original tip instance if form date isn't reliable
+                    return redirect('user_tips', year=tip.date.year, month=tip.date.month) 
+        else: # Form is invalid
+            if is_ajax:
+                # For AJAX POST error, return JSON with errors
+                return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+            else:
+                # For standard POST error, re-render the edit form page
+                return render(request, 'myapp/edit_tip.html', {'form': form, 'tip': tip})
 
-    return render(request, 'myapp/edit_tip.html', {'form': form, 'tip': tip})
+    # Handle other methods if necessary
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
 
 @login_required
 def delete_tip(request, tip_id):
-    tip = get_object_or_404(Tip, id=tip_id, user=request.user)  # Ensure the user owns this tip
-    
-    if request.method == "POST":
-        tip.delete()
-        return redirect('user_tips')  # Redirect back to the tips page after deletion
-    
-    return render(request, 'myapp/confirm_delete.html', {'tip': tip})
-
-def delete_tip(request, tip_id):
     tip = get_object_or_404(Tip, id=tip_id, user=request.user)
-    tip.delete()
-    return redirect('user_tips')  # or your calendar view name
+    
+    # It's generally safer to require POST for delete operations
+    if request.method == "POST": 
+        tip_year = tip.date.year
+        tip_month = tip.date.month
+        tip.delete()
+        # Add AJAX handling here if needed later
+        # For now, redirect back to the month the tip was in
+        return redirect('user_tips', year=tip_year, month=tip_month) 
+    
+    # If GET, show a confirmation page (good practice)
+    # Make sure you have a 'confirm_delete.html' template
+    return render(request, 'myapp/confirm_delete.html', {'tip': tip}) 

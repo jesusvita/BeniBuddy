@@ -1,0 +1,66 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Tip Tracker{% endblock %}</title>
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Optional: Custom Tailwind config -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#880808',
+              lightPink: '#E2B4BD',
+              softBlue: '#93A8AC',
+              deepBlue: '#424B54',
+              paleWhite: '#fdfdfd',
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Your custom styles -->
+    <link rel="stylesheet" href="{% static 'myapp/css/styles.css' %}">
+    <style>
+      .week-divider:not(:last-child)::after {
+        content: '';
+        display: block;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        margin-top: 0.5rem;
+      }
+    </style>
+  </head>
+
+<body class="bg-stone-900  text-white min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-red-900 text-white shadow">
+      <div class="container mx-auto flex justify-between items-center px-4 py-3">
+        <a href="{% url 'user_tips' %}" class="lightPink font-bold text-xl tracking-wide">
+          BeniBuddy
+        </a>
+        {% if user.is_authenticated %}
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="bg-primary hover:bg-red-800 text-white px-4 py-1 rounded-full transition">
+              Logout
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </nav>
+
+    <!-- Page content -->
+    <div class="container mx-auto px-4 py-6">
+        {% block content %}{% endblock %}
+    </div>
+
+</body>
+</html>

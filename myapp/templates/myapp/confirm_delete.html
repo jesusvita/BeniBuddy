@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Delete Tip</title>
+</head>
+<body>
+    <h2>Are you sure you want to delete this tip?</h2>
+    <p>Date: {{ tip.date|date:"Y-m-d" }} | Amount: ${{ tip.amount }} | Note: {{ tip.note }}</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Yes, Delete</button>
+    </form>
+
+    <p><a href="{% url 'user_tips' %}">Cancel</a></p>
+</body>
+</html>

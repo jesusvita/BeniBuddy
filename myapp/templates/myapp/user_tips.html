@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block title %}Your Tips - {{ month_name }} {{ year }}{% endblock %}
+
+{% block content %}
+<div class="rounded min-h-screen px-4 py-6 bg-gradient-to-b from-neutral-950 to-stone-900 text-white">
+
+  <!-- Header Navigation -->
+  <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+    
+    <!-- Previous -->
+    <a href="{% url 'user_tips' prev_year prev_month %}"
+       class="font-semibold py-1 px-4 rounded-full shadow transition hover:bg-red-900"
+       style="background-color: #880808;">
+        <span class="hidden sm:inline">← Previous</span>
+        <span class="inline sm:hidden">←</span>
+    </a>
+
+    <!-- Month & Totals -->
+    <div class="text-center">
+      <h2 class="text-2xl font-bold lightPink">{{ month_name }} {{ year }}</h2>
+      <div class="text-sm">
+        <span class="text-green-300 font-medium">Tips: ${{ total_monthly_tip|floatformat:2 }}</span> &nbsp;|&nbsp;
+        <span class="text-blue-300 font-medium">Gratuity: ${{ total_monthly_gratuity|floatformat:2 }}</span>
+      </div>
+    </div>
+
+    <!-- Next -->
+    <a href="{% url 'user_tips' next_year next_month %}"
+       class="font-semibold py-1 px-4 rounded-full shadow transition hover:bg-red-900"
+       style="background-color: #880808;">
+       <span class="hidden sm:inline">Next →</span>
+        <span class="inline sm:hidden">→</span>
+    </a>
+  </div>
+
+  <!-- Weekday Labels -->
+  <div class="grid grid-cols-7 text-center font-semibold text-[#93A8AC] mb-2">
+    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div>
+    <div>Thu</div><div>Fri</div><div>Sat</div>
+  </div>
+
+  <!-- Calendar Grid -->
+   
+  <div class="grid grid-cols-7 sm:grid-cols-7 gap-x-1 gap-y-2 text-sm md:gap-2">
+    {% for week in weeks %}
+      
+      {% for day in week %}
+        <div class="relative transition-transform duration-150 hover:scale-[1.03]">
+          {% if day %}
+            {% if day.tip %}
+              <a href="{% url 'edit_tip' day.tip.id %}" class="block h-16 rounded-lg p-1 bg-white text-gray-700 shadow hover:bg-gray-100 transition">
+              {% else %}
+              <a href="{% url 'add_tip' %}?date={{ year }}-{{ month|stringformat:'02d' }}-{{ day.day|stringformat:'02d' }}"
+                 class="block h-16 rounded-lg p-1 bg-white text-gray-700 shadow hover:bg-gray-100 transition">
+            {% endif %}
+                <!-- Date Number -->
+                <div class="absolute top-1 left-1 text-xs font-semibold">{{ day.day }}</div>
+
+                <!-- Tip Info -->
+                <div class="flex flex-col justify-center items-center h-full text-sm font-semibold">
+                  {% if day.tip %}
+                    <div class="text-green-700"> ${{ day.tip.amount }}</div>
+                    {% if day.tip.gratuity %}
+                      <div class="text-xs text-blue-700">${{ day.tip.gratuity }}</div>
+                    {% endif %}
+                  {% else %}
+                    <div class="text-xs text-gray-400 italic"></div>
+                  {% endif %}
+                </div>
+              </a>
+          {% else %}
+            <!-- Empty box -->
+            <div class="h-16 rounded-lg bg-[#93A8AC] opacity-30"></div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+
+  <!-- Estimated Paycheck Box -->
+  <div class="bg-gray-300 text-[#424B54] p-4 rounded-lg shadow mt-6 relative text-sm sm:text-base">
+    <!-- + Button -->
+    <div class="absolute top-2 right-2 sm:top-4 sm:right-4">
+      <a href="{% url 'set_pay_cycle' %}" 
+         class="bg-[#880808] text-white px-3 py-1 rounded-full hover:bg-red-900 text-sm shadow">
+         +
+      </a>
+    </div>
+
+    <!-- Paycheck Summary -->
+    <h2 class="text-xl font-bold mb-2">Estimated Paycheck for {{ paycheck_day|date:"m-d" }}</h2>
+    <p class="text-green-800 text-lg">Tips: ${{ recent_total_tip|floatformat:2 }}</p>
+    <p class="text-blue-800 text-lg">Gratuity: ${{ recent_total_gratuity|floatformat:2 }}</p>
+    <p class="text-black text-xl mt-2 font-semibold">Total: ${{ paycheck_total|floatformat:2 }}</p>
+  </div>
+</div>
+{% endblock %}

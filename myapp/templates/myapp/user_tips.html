@@ -119,12 +119,13 @@
           <!-- Your TipForm fields go here -->
           <!-- Example: -->
           <div class="mb-4">
-              <label for="modalTipAmount" class="block text-sm font-medium text-gray-700">Amount</label>
+              <label for="modalTipAmount" class="block text-sm font-medium text-gray-700">Tip Amount</label>
               <input type="number" step="0.01" name="amount" id="modalTipAmount" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
           </div>
           <div class="mb-4">
               <label for="modalTipGratuity" class="block text-sm font-medium text-gray-700">Gratuity (If you had any)</label>
-              <input type="number" step="0.01" name="gratuity" id="modalTipGratuity" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+              <input type="number" step="0.01" name="gratuity" id="modalTipGratuity" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+
           </div>
           <!-- Add other fields as needed -->
 
@@ -207,53 +208,60 @@
   </div>
 </div>
 
+<!-- Confirm Delete Tip Modal -->
+<div id="confirmDeleteModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
+  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
+      <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-semibold">Confirm Deletion</h3>
+          <button id="closeConfirmDeleteModalBtn" type="button" class="text-gray-500 hover:text-gray-800">&times;</button>
+      </div>
+
+      <div class="mb-6">
+          <p class="text-sm text-gray-700">Are you sure you want to permanently delete this tip?</p>
+          <p class="text-sm text-red-600 font-medium">This action cannot be undone.</p>
+          {# We can optionally add details here later if needed, like date/amount #}
+      </div>
+
+      <div class="mt-6 flex justify-end">
+          <button type="button" id="cancelDeleteBtn" class="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+              Cancel
+          </button>
+          <button type="button" id="confirmDeleteBtn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+              Delete Tip
+          </button>
+          {# Hidden input or data attribute to store the URL temporarily #}
+          <input type="hidden" id="confirmDeleteUrl">
+      </div>
+  </div>
+</div>
+
+
 
 {% block javascript %}
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    // --- Get modal elements (no changes here) ---
+    // --- Get Add Tip Modal elements ---
     const modal = document.getElementById('addTipModal');
     const closeModalBtn = document.getElementById('closeModalBtn');
     const cancelModalBtn = document.getElementById('cancelModalBtn');
     const modalTipDateInput = document.getElementById('modalTipDate');
-    const addTipForm = document.getElementById('addTipForm'); // Get the form itself
+    const addTipForm = document.getElementById('addTipForm');
 
-    // --- Function to open the modal (no changes here) ---
+    // --- Function to open the Add Tip modal ---
     function openModal(date) {
-      if (!modal || !modalTipDateInput || !addTipForm) return; 
-      modalTipDateInput.value = date; 
-      modal.classList.remove('hidden'); 
-      addTipForm.reset(); // Reset form fields
-      // Clear previous errors if you implement specific error display later
-      // clearFormErrors(); 
+      if (!modal || !modalTipDateInput || !addTipForm) return;
+      modalTipDateInput.value = date;
+      modal.classList.remove('hidden');
+      addTipForm.reset();
     }
 
-    // --- Function to close the modal (no changes here) ---
+    // --- Function to close the Add Tip modal ---
     function closeModal() {
-      if (!modal) return; 
-      modal.classList.add('hidden'); 
+      if (!modal) return;
+      modal.classList.add('hidden');
     }
 
-    // --- Event listeners to open the modal (no changes here) ---
-    const calendarGrid = document.querySelector('.grid.grid-cols-7.sm\\:grid-cols-7'); 
-    if (calendarGrid) {
-        calendarGrid.addEventListener('click', (event) => {
-            const addButton = event.target.closest('.add-tip-button'); 
-            if (addButton) {
-                event.preventDefault(); 
-                const date = addButton.dataset.date; 
-                if (date) {
-                    openModal(date);
-                } else {
-                    console.error('Could not find date on clicked element.');
-                }
-            }
-        });
-    } else {
-        console.error('Calendar grid container not found for event delegation.');
-    }
-
-    // --- Event listeners for closing the modal (no changes here) ---
+    // --- Event listeners for closing the Add Tip modal ---
     if (closeModalBtn) {
       closeModalBtn.addEventListener('click', closeModal);
     }
@@ -262,296 +270,395 @@
     }
     if (modal) {
       modal.addEventListener('click', (event) => {
-        if (event.target === modal) { 
+        if (event.target === modal) {
           closeModal();
         }
       });
     }
 
-    // --- NEW: Handle Form Submission via AJAX ---
+    // --- Handle Add Tip Form Submission via AJAX ---
     if (addTipForm) {
       addTipForm.addEventListener('submit', (event) => {
-        event.preventDefault(); // Prevent traditional form submission
+        event.preventDefault();
 
         const formData = new FormData(addTipForm);
-        const url = addTipForm.action; // Get URL from form's action attribute
-        // Find the CSRF token input within the form
+        const url = addTipForm.action;
         const csrfTokenInput = addTipForm.querySelector('input[name="csrfmiddlewaretoken"]');
-        
+
         if (!csrfTokenInput) {
-            console.error('CSRF token input not found!');
+            console.error('CSRF token input not found!'); // Keep essential error logs
             alert('Error: Could not submit form. Security token missing.');
-            return; // Stop submission if token is missing
+            return;
         }
         const csrfToken = csrfTokenInput.value;
 
-
-        // Optional: Add loading state indication (e.g., disable button)
         const submitButton = addTipForm.querySelector('button[type="submit"]');
         if (submitButton) submitButton.disabled = true;
-
 
         fetch(url, {
           method: 'POST',
           body: formData,
           headers: {
-            // Important: Let browser set Content-Type for FormData
-            'X-CSRFToken': csrfToken, // Add CSRF token header
-            'X-Requested-With': 'XMLHttpRequest', // Standard header for AJAX detection
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
           },
         })
         .then(response => {
-            // Check if the response status indicates an issue (like validation error 400)
             if (!response.ok) {
-                // If status is 400, likely validation errors, try to parse JSON
                 if (response.status === 400) {
                     return response.json().then(data => {
-                        // Throw an error object containing the validation errors
-                        throw { validationErrors: data.errors }; 
+                        throw { validationErrors: data.errors };
                     });
                 }
-                // Otherwise, throw a generic error for other HTTP issues
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            // If response is OK (e.g., 200), parse the JSON body
-            return response.json(); 
+            return response.json();
         })
         .then(data => {
-          // Assuming Django returns { status: 'success', ... } on success
           if (data.status === 'success') {
             closeModal();
-            // Easiest way to see the change: reload the page
-            location.reload(); 
-            // More advanced: Update the specific calendar cell dynamically here
+            location.reload();
           } else {
-            // Handle cases where the server returns 200 OK but indicates failure in JSON
-            // (This shouldn't happen if using HTTP 400 for errors, but good to have)
             alert(data.message || 'An unexpected error occurred.');
-            console.error('Server indicated failure:', data);
+            console.error('Server indicated failure:', data); // Keep essential error logs
           }
         })
         .catch(error => {
-          console.error('Error submitting form:', error);
+          console.error('Error submitting form:', error); // Keep essential error logs
           if (error.validationErrors) {
-            // Handle validation errors (simple alert for now)
             let errorMessages = "Please correct the following errors:\n";
             for (const field in error.validationErrors) {
               errorMessages += `\n${field}: ${error.validationErrors[field].join(', ')}`;
             }
             alert(errorMessages);
-            // More advanced: Display errors next to form fields here
           } else {
-            // Handle network errors or other issues
             alert('Could not save tip. Please check your connection and try again.');
           }
         })
         .finally(() => {
-            // Re-enable the submit button regardless of success or failure
             if (submitButton) submitButton.disabled = false;
         });
       });
     } else {
-        console.error('Add tip form not found.');
+        console.error('Add tip form not found.'); // Keep essential error logs
     }
 
-      // --- Get Edit Modal Elements ---
-  const editModal = document.getElementById('editTipModal');
-  const closeEditModalBtn = document.getElementById('closeEditModalBtn');
-  const cancelEditModalBtn = document.getElementById('cancelEditModalBtn');
-  const editTipForm = document.getElementById('editTipForm');
-  const editModalTipDateInput = document.getElementById('editModalTipDate');
-  const editModalTipAmountInput = document.getElementById('editModalTipAmount');
-  const editModalTipGratuityInput = document.getElementById('editModalTipGratuity');
-  const editModalTipNoteInput = document.getElementById('editModalTipNote');
-  const deleteTipLink = document.getElementById('deleteTipLink'); // Get delete link
+    // --- Get Edit Modal Elements ---
+    const editModal = document.getElementById('editTipModal');
+    const closeEditModalBtn = document.getElementById('closeEditModalBtn');
+    const cancelEditModalBtn = document.getElementById('cancelEditModalBtn');
+    const editTipForm = document.getElementById('editTipForm');
+    const editModalTipDateInput = document.getElementById('editModalTipDate');
+    const editModalTipAmountInput = document.getElementById('editModalTipAmount');
+    const editModalTipGratuityInput = document.getElementById('editModalTipGratuity');
+    const editModalTipNoteInput = document.getElementById('editModalTipNote');
+    const deleteTipLink = document.getElementById('deleteTipLink');
 
-  // --- Function to open the Edit Modal ---
-  function openEditModal(tipData) {
-    if (!editModal || !editTipForm) return;
+    // --- Function to open the Edit Modal ---
+    function openEditModal(tipData) {
+        if (!editModal || !editTipForm || !deleteTipLink) return;
 
-    // Populate form fields
-    editModalTipDateInput.value = tipData.date.split('T')[0]; // Get YYYY-MM-DD part if DateTimeField
-    editModalTipAmountInput.value = tipData.amount;
-    editModalTipGratuityInput.value = tipData.gratuity;
-    editModalTipNoteInput.value = tipData.note || ''; // Handle null notes
-
-    // Set the form's action URL dynamically
-    const editUrl = `/edit-tip/${tipData.id}/`; // Construct the URL
-    editTipForm.action = editUrl;
-
-    // Set the delete link URL
-    const deleteUrl = `/delete-tip/${tipData.id}/`;
-    deleteTipLink.href = deleteUrl; 
-
-    editModal.classList.remove('hidden'); // Show the modal
-  }
-
-  // --- Function to close the Edit Modal ---
-  function closeEditModal() {
-    if (!editModal) return;
-    editModal.classList.add('hidden');
-  }
-
-  // --- Modify Event Delegation on Calendar Grid ---
-  // The existing listener needs to handle BOTH add and edit buttons
-  if (calendarGrid) {
-      calendarGrid.addEventListener('click', (event) => {
-          const addButton = event.target.closest('.add-tip-button');
-          const editButton = event.target.closest('.edit-tip-button'); // Check for edit button
-
-          if (addButton) {
-              event.preventDefault(); 
-              const date = addButton.dataset.date; 
-              if (date) {
-                  openModal(date); // Call original openModal
-              } else {
-                  console.error('Could not find date on add button.');
-              }
-          } else if (editButton) { // Handle edit button click
-              event.preventDefault();
-              const tipId = editButton.dataset.tipId;
-              if (tipId) {
-                  // Fetch existing tip data via AJAX GET
-                  fetch(`/edit-tip/${tipId}/`, { // Use the edit URL for GET too
-                      method: 'GET',
-                      headers: {
-                          'X-Requested-With': 'XMLHttpRequest', // Identify as AJAX
-                          'Accept': 'application/json' // Ask for JSON response
-                      }
-                  })
-                  .then(response => {
-                      if (!response.ok) {
-                          throw new Error(`HTTP error! status: ${response.status}`);
-                      }
-                      return response.json();
-                  })
-                  .then(data => {
-                      if (data.tip) { // Check if backend returned tip data
-                          openEditModal(data.tip); // Pass fetched data to open function
-                      } else {
-                          console.error('Tip data not found in response:', data);
-                          alert('Error: Could not load tip details.');
-                      }
-                  })
-                  .catch(error => {
-                      console.error('Error fetching tip data:', error);
-                      alert('Error: Could not load tip details. Please try again.');
-                  });
-              } else {
-                  console.error('Could not find tip ID on edit button.');
-              }
-          }
-      });
-  } else {
-      console.error('Calendar grid container not found for event delegation.');
-  }
-
-  // --- Add event listeners for closing the Edit Modal ---
-  if (closeEditModalBtn) {
-    closeEditModalBtn.addEventListener('click', closeEditModal);
-  }
-  if (cancelEditModalBtn) {
-    cancelEditModalBtn.addEventListener('click', closeEditModal);
-  }
-  if (editModal) {
-    editModal.addEventListener('click', (event) => {
-      if (event.target === editModal) {
-        closeEditModal();
-      }
-    });
-  }
-
-  // --- Handle Edit Form Submission via AJAX ---
-  if (editTipForm) {
-    editTipForm.addEventListener('submit', (event) => {
-      event.preventDefault(); // Prevent traditional submission
-
-      const formData = new FormData(editTipForm);
-      const url = editTipForm.action; // Get URL from form's action (set dynamically)
-      const csrfTokenInput = editTipForm.querySelector('input[name="csrfmiddlewaretoken"]');
-      
-      if (!csrfTokenInput) {
-          console.error('CSRF token input not found in edit form!');
-          alert('Error: Could not submit form. Security token missing.');
-          return; 
-      }
-      const csrfToken = csrfTokenInput.value;
-
-      const submitButton = editTipForm.querySelector('button[type="submit"]');
-      if (submitButton) submitButton.disabled = true;
-
-      fetch(url, { // URL already includes tip_id
-        method: 'POST',
-        body: formData,
-        headers: {
-          'X-CSRFToken': csrfToken,
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      })
-      .then(response => {
-          if (!response.ok) {
-              if (response.status === 400) {
-                  return response.json().then(data => {
-                      throw { validationErrors: data.errors }; 
-                  });
-              }
-              throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json(); 
-      })
-      .then(data => {
-        if (data.status === 'success') {
-          closeEditModal();
-          location.reload(); // Reload page to see changes
-        } else {
-          alert(data.message || 'An unexpected error occurred while saving.');
-          console.error('Server indicated failure:', data);
+        // Ensure tipData.date is treated correctly (might be ISO string)
+        let datePart = tipData.date;
+        if (datePart && datePart.includes('T')) {
+            datePart = datePart.split('T')[0]; // Extract YYYY-MM-DD if it's ISO format
         }
-      })
-      .catch(error => {
-        console.error('Error submitting edit form:', error);
-        if (error.validationErrors) {
-          let errorMessages = "Please correct the following errors:\n";
-          for (const field in error.validationErrors) {
-            errorMessages += `\n${field}: ${error.validationErrors[field].join(', ')}`;
-          }
-          alert(errorMessages);
-          // Add logic here to display errors next to fields if desired
-        } else {
-          alert('Could not save changes. Please check your connection and try again.');
+        editModalTipDateInput.value = datePart;
+        editModalTipAmountInput.value = tipData.amount;
+        // Handle potential null/undefined gratuity from JSON
+        editModalTipGratuityInput.value = tipData.gratuity != null ? tipData.gratuity : '';
+        editModalTipNoteInput.value = tipData.note || '';
+
+        const editUrl = `/edit-tip/${tipData.id}/`;
+        editTipForm.action = editUrl;
+
+        const deleteUrl = `/delete-tip/${tipData.id}/`;
+        deleteTipLink.href = deleteUrl;
+
+        editModal.classList.remove('hidden');
+    }
+
+    // --- Function to close the Edit Modal ---
+    function closeEditModal() {
+        if (!editModal) return;
+        editModal.classList.add('hidden');
+    }
+
+    // --- Add event listeners for closing the Edit Modal ---
+    if (closeEditModalBtn) {
+        closeEditModalBtn.addEventListener('click', closeEditModal);
+    }
+    if (cancelEditModalBtn) {
+        cancelEditModalBtn.addEventListener('click', closeEditModal);
+    }
+    if (editModal) {
+        editModal.addEventListener('click', (event) => {
+        if (event.target === editModal) {
+            closeEditModal();
         }
-      })
-      .finally(() => {
-          if (submitButton) submitButton.disabled = false;
-      });
-    });
-  } else {
-      console.error('Edit tip form not found.');
-  }
+        });
+    }
+
+    // --- Handle Edit Form Submission via AJAX ---
+    if (editTipForm) {
+        editTipForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(editTipForm);
+            const url = editTipForm.action;
+            const csrfTokenInput = editTipForm.querySelector('input[name="csrfmiddlewaretoken"]');
+
+            if (!csrfTokenInput) {
+                console.error('CSRF token input not found in edit form!'); // Keep essential error logs
+                alert('Error: Could not submit form. Security token missing.');
+                return;
+            }
+            const csrfToken = csrfTokenInput.value;
+
+            const submitButton = editTipForm.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 400) {
+                        return response.json().then(data => {
+                            throw { validationErrors: data.errors };
+                        });
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                closeEditModal();
+                location.reload();
+                } else {
+                alert(data.message || 'An unexpected error occurred while saving.');
+                console.error('Server indicated failure:', data); // Keep essential error logs
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting edit form:', error); // Keep essential error logs
+                if (error.validationErrors) {
+                let errorMessages = "Please correct the following errors:\n";
+                for (const field in error.validationErrors) {
+                    errorMessages += `\n${field}: ${error.validationErrors[field].join(', ')}`;
+                }
+                alert(errorMessages);
+                } else {
+                alert('Could not save changes. Please check your connection and try again.');
+                }
+            })
+            .finally(() => {
+                if (submitButton) submitButton.disabled = false;
+            });
+        });
+    } else {
+        console.error('Edit tip form not found.'); // Keep essential error logs
+    }
+
+        // --- Get Confirm Delete Modal Elements ---
+        const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+    const closeConfirmDeleteModalBtn = document.getElementById('closeConfirmDeleteModalBtn');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const confirmDeleteUrlInput = document.getElementById('confirmDeleteUrl'); // Input to store URL
+
+    // --- Function to open the Confirm Delete Modal ---
+    function openConfirmDeleteModal(url) {
+        if (!confirmDeleteModal || !confirmDeleteUrlInput) return;
+        confirmDeleteUrlInput.value = url; // Store the URL to delete
+        confirmDeleteModal.classList.remove('hidden');
+    }
+
+    // --- Function to close the Confirm Delete Modal ---
+    function closeConfirmDeleteModal() {
+        if (!confirmDeleteModal || !confirmDeleteUrlInput) return;
+        confirmDeleteModal.classList.add('hidden');
+        confirmDeleteUrlInput.value = ''; // Clear the URL
+    }
+
+    // --- Event listeners for closing the Confirm Delete modal ---
+    if (closeConfirmDeleteModalBtn) {
+        closeConfirmDeleteModalBtn.addEventListener('click', closeConfirmDeleteModal);
+    }
+    if (cancelDeleteBtn) {
+        cancelDeleteBtn.addEventListener('click', closeConfirmDeleteModal);
+    }
+    if (confirmDeleteModal) {
+        confirmDeleteModal.addEventListener('click', (event) => {
+            if (event.target === confirmDeleteModal) { // Click on overlay
+                closeConfirmDeleteModal();
+            }
+        });
+    }
+
+    // --- MODIFIED: Handle Delete Tip Link Click (Opens Confirmation Modal) ---
+    if (deleteTipLink) {
+        deleteTipLink.addEventListener('click', (event) => {
+            event.preventDefault(); // Stop the link from navigating
+
+            const url = deleteTipLink.href; // Get the URL from the link itself
+            if (url) {
+                openConfirmDeleteModal(url); // Open the custom confirmation modal
+            } else {
+                console.error('Could not get URL from delete link.');
+                alert('Error preparing deletion.');
+            }
+        });
+    } else {
+        console.error('Delete tip link not found.'); // Keep essential error logs
+    }
+    // --- END OF MODIFIED DELETE LINK HANDLING ---
+
+    // --- NEW: Handle Actual Deletion from Confirmation Modal ---
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', () => {
+            const url = confirmDeleteUrlInput.value; // Get the stored URL
+            const csrfTokenInput = editTipForm.querySelector('input[name="csrfmiddlewaretoken"]'); // Get CSRF from the edit form
+
+            if (!url) {
+                console.error('No delete URL found in confirmation modal.');
+                alert('Error: Could not determine which tip to delete.');
+                closeConfirmDeleteModal();
+                return;
+            }
+            if (!csrfTokenInput) {
+                console.error('CSRF token input not found in edit form for deletion!');
+                alert('Error: Could not delete tip. Security token missing.');
+                closeConfirmDeleteModal();
+                return;
+            }
+            const csrfToken = csrfTokenInput.value;
+
+            // Optional: Add loading state to button
+            confirmDeleteBtn.disabled = true;
+            confirmDeleteBtn.textContent = 'Deleting...';
+
+            fetch(url, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(errData => {
+                        throw new Error(errData.message || `HTTP error! status: ${response.status}`);
+                    }).catch(() => {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    closeConfirmDeleteModal(); // Close confirmation modal
+                    closeEditModal();       // Close the edit modal as well
+                    location.reload();      // Reload the page
+                } else {
+                    console.error('Server indicated deletion failure:', data);
+                    alert(data.message || 'An unexpected error occurred while deleting.');
+                }
+            })
+            .catch(error => {
+                console.error('Fetch failed completely during delete:', error);
+                alert(`Could not delete tip: ${error.message}`);
+            })
+            .finally(() => {
+                 // Reset button state
+                 confirmDeleteBtn.disabled = false;
+                 confirmDeleteBtn.textContent = 'Delete Tip';
+                 // Ensure modal is closed even if fetch failed before success check
+                 if (!confirmDeleteModal.classList.contains('hidden')) {
+                     closeConfirmDeleteModal();
+                 }
+            });
+        });
+    } else {
+        console.error('Confirm delete button not found.');
+    }
+    // --- END OF ACTUAL DELETION HANDLING ---
 
 
-  });
-      // --- Get Pay Cycle Modal Elements ---
-      const payCycleModal = document.getElementById('editPayCycleModal');
+
+    // --- Event Delegation on Calendar Grid (Handles BOTH Add and Edit) ---
+    const calendarGrid = document.querySelector('.grid.grid-cols-7.sm\\:grid-cols-7');
+    if (calendarGrid) {
+        calendarGrid.addEventListener('click', (event) => {
+            const addButton = event.target.closest('.add-tip-button');
+            const editButton = event.target.closest('.edit-tip-button');
+
+            if (addButton) {
+                event.preventDefault();
+                const date = addButton.dataset.date;
+                if (date) {
+                    openModal(date); // Open Add Tip modal
+                } else {
+                    console.error('Could not find date on add button.'); // Keep essential error logs
+                }
+            } else if (editButton) { // Handle edit button click
+                event.preventDefault();
+                const tipId = editButton.dataset.tipId;
+                if (tipId) {
+                    // Fetch existing tip data via AJAX GET
+                    fetch(`/edit-tip/${tipId}/`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.tip) {
+                            openEditModal(data.tip); // Open Edit Tip modal with data
+                        } else {
+                            console.error('Tip data not found in response:', data); // Keep essential error logs
+                            alert('Error: Could not load tip details.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching tip data:', error); // Keep essential error logs
+                        alert('Error: Could not load tip details. Please try again.');
+                    });
+                } else {
+                    console.error('Could not find tip ID on edit button.'); // Keep essential error logs
+                }
+            }
+        });
+    } else {
+        console.error('Calendar grid container not found for event delegation.'); // Keep essential error logs
+    }
+
+    // --- Get Pay Cycle Modal Elements ---
+    const payCycleModal = document.getElementById('editPayCycleModal');
     const openPayCycleBtn = document.getElementById('openPayCycleModalBtn');
     const closePayCycleBtn = document.getElementById('closePayCycleModalBtn');
     const cancelPayCycleBtn = document.getElementById('cancelPayCycleModalBtn');
     const payCycleForm = document.getElementById('editPayCycleForm');
     const payCycleStartDateInput = document.getElementById('payCycleStartDate');
-    const payCycleFrequencyInput = document.getElementById('payCycleFrequency');
 
     // --- Function to open the Pay Cycle Modal ---
     function openPayCycleModal() {
         if (!payCycleModal) return;
-        // Optional: Fetch current settings via AJAX if not pre-filled by Django template
-        // fetch('/url/to/get/current/settings/')
-        // .then(response => response.json())
-        // .then(data => {
-        //     if(data.start_date) payCycleStartDateInput.value = data.start_date;
-        //     if(data.frequency) payCycleFrequencyInput.value = data.frequency;
-        // });
         payCycleModal.classList.remove('hidden');
-        // payCycleForm.reset(); // Reset if you don't pre-fill
     }
 
     // --- Function to close the Pay Cycle Modal ---
@@ -563,11 +670,11 @@
     // --- Event Listeners for Pay Cycle Modal ---
     if (openPayCycleBtn) {
         openPayCycleBtn.addEventListener('click', (event) => {
-            event.preventDefault(); // Prevent any default button behavior
+            event.preventDefault();
             openPayCycleModal();
         });
     } else {
-        console.error('Open Pay Cycle Modal button not found.');
+        console.error('Open Pay Cycle Modal button not found.'); // Keep essential error logs
     }
 
     if (closePayCycleBtn) {
@@ -578,7 +685,7 @@
     }
     if (payCycleModal) {
         payCycleModal.addEventListener('click', (event) => {
-            if (event.target === payCycleModal) { // Click on overlay
+            if (event.target === payCycleModal) {
                 closePayCycleModal();
             }
         });
@@ -587,85 +694,74 @@
     // --- Handle Pay Cycle Form Submission via AJAX ---
     if (payCycleForm) {
         payCycleForm.addEventListener('submit', (event) => {
-            event.preventDefault(); // Prevent traditional form submission
+            event.preventDefault();
 
             const formData = new FormData(payCycleForm);
             const url = payCycleForm.action;
             const csrfTokenInput = payCycleForm.querySelector('input[name="csrfmiddlewaretoken"]');
 
             if (!csrfTokenInput) {
-                console.error('CSRF token input not found in pay cycle form!');
+                console.error('CSRF token input not found in pay cycle form!'); // Keep essential error logs
                 alert('Error: Could not submit form. Security token missing.');
                 return;
             }
             const csrfToken = csrfTokenInput.value;
 
             const submitButton = payCycleForm.querySelector('button[type="submit"]');
-            if (submitButton) submitButton.disabled = true; // Disable button during request
+            if (submitButton) submitButton.disabled = true;
 
             fetch(url, {
                 method: 'POST',
                 body: formData,
                 headers: {
                     'X-CSRFToken': csrfToken,
-                    'X-Requested-With': 'XMLHttpRequest', // Identify as AJAX
-                    'Accept': 'application/json' // Expect JSON response
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 },
             })
             .then(response => {
                 if (!response.ok) {
-                    // Handle validation errors (status 400) or other errors
                     if (response.status === 400) {
                         return response.json().then(data => {
-                            throw { validationErrors: data.errors || {'_error': ['Validation failed. Please check the fields.']} }; // Ensure errors exist
+                            throw { validationErrors: data.errors || {'_error': ['Validation failed. Please check the fields.']} };
                         });
                     }
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                return response.json(); // Parse JSON on success (2xx status)
+                return response.json();
             })
             .then(data => {
-                // Assuming backend returns { status: 'success', ... }
                 if (data.status === 'success') {
                     closePayCycleModal();
-                    // Reload the page to see updated paycheck estimate
-                    location.reload();
-                    // Optional: Show a success message (e.g., using a toast library)
-                    // alert(data.message || 'Pay cycle updated successfully!');
+                    location.reload(); // Reload to see updated estimate
                 } else {
-                    // Handle cases where server returns 2xx but indicates failure in JSON
                     alert(data.message || 'An unexpected error occurred.');
-                    console.error('Server indicated failure:', data);
+                    console.error('Server indicated failure:', data); // Keep essential error logs
                 }
             })
             .catch(error => {
-                console.error('Error submitting pay cycle form:', error);
+                console.error('Error submitting pay cycle form:', error); // Keep essential error logs
                 if (error.validationErrors) {
-                    // Basic validation error display
                     let errorMessages = "Please correct the following errors:\n";
                     for (const field in error.validationErrors) {
-                        // If field is '_error', it's a non-field error
                         const prefix = field === '_error' ? '' : `${field}: `;
                         errorMessages += `\n${prefix}${error.validationErrors[field].join(', ')}`;
                     }
                     alert(errorMessages);
-                    // TODO: Implement more sophisticated error display next to fields
                 } else {
-                    // Handle network errors or other issues
                     alert('Could not save pay cycle settings. Please check your connection and try again.');
                 }
             })
             .finally(() => {
-                // Re-enable the submit button
                 if (submitButton) submitButton.disabled = false;
             });
         });
     } else {
-        console.error('Edit pay cycle form not found.');
+        console.error('Edit pay cycle form not found.'); // Keep essential error logs
     }
-
     // --- END OF PAY CYCLE MODAL JS ---
 
+  }); // <-- SINGLE Closing parenthesis and curly brace for DOMContentLoaded
 </script>
 {% endblock %}
 

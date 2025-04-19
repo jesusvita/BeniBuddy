@@ -2,13 +2,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .forms import SignUpForm, TipForm, PayCycleForm
 from .models import Tip, PaycheckCycle
 from django.contrib.auth.decorators import login_required
-import calendar 
-from datetime import date, timedelta, datetime # Corrected import: datetime is a module
+import calendar
+from datetime import date, timedelta, datetime
 from django.db.models import Sum
-# Import JsonResponse, model_to_dict, require_http_methods, HttpResponseForbidden
-from django.http import JsonResponse, HttpResponseForbidden, Http404 # Added Http404
+from django.db.models.functions import Coalesce
+from django.http import JsonResponse, HttpResponseForbidden, Http404
 from django.forms.models import model_to_dict
-from django.views.decorators.http import require_http_methods # Added require_http_methods
+from django.views.decorators.http import require_http_methods
+from django.utils import timezone
+from django.db import models
 
 def home(request):
     if request.user.is_authenticated:
@@ -68,17 +70,19 @@ def set_pay_cycle(request):
 
 @login_required
 def user_tips(request, year=None, month=None):
-    today = date.today()
-    current_year, current_month = today.year, today.month
+    # Use timezone-aware date if timezones are enabled in settings.py
+    # today_date = timezone.localdate()
+    today_date = date.today() # Use this if timezones are not critical/enabled
+
+    current_year, current_month = today_date.year, today_date.month
 
     # Use provided year/month or default to current
     year = int(year) if year else current_year
     month = int(month) if month else current_month
 
-    # Validate month/year to prevent errors (basic validation)
+    # Validate month/year
     if not (1 <= month <= 12):
-        month = current_month # Reset to current if invalid
-    # Add year validation if needed (e.g., range)
+        month = current_month
 
     # --- Month Navigation Logic ---
     if month == 1:
@@ -93,25 +97,27 @@ def user_tips(request, year=None, month=None):
     # --- Calendar Data Fetching ---
     try:
         first_day_month = date(year, month, 1)
-        # Handle potential ValueError if year/month combo is invalid (e.g., Feb 30)
-        # calendar.monthrange handles this well
         last_day_val = calendar.monthrange(year, month)[1]
         last_day_month = date(year, month, last_day_val)
     except ValueError:
-        # Handle invalid date combination, redirect to current month?
-        return redirect('user_tips') 
+        return redirect('user_tips')
 
-    # Use date__date for comparison if Tip.date is DateTimeField
+    # Fetch tips for the displayed calendar month
     monthly_tips = Tip.objects.filter(
-        user=request.user, 
-        date__date__range=[first_day_month, last_day_month] 
-    ).order_by('date') # Order tips for consistency if needed
+        user=request.user,
+        date__date__range=[first_day_month, last_day_month]
+    ).order_by('date')
 
-    total_monthly_tip = monthly_tips.aggregate(Sum('amount'))['amount__sum'] or 0
-    total_monthly_gratuity = monthly_tips.aggregate(Sum('gratuity'))['gratuity__sum'] or 0
-    
-    # Create a dictionary mapping date objects to tips for easier lookup
-    tip_dict = {tip.date.date(): tip for tip in monthly_tips} 
+    # Calculate totals for the displayed month - CORRECTED AGGREGATION
+    monthly_aggregation = monthly_tips.aggregate(
+        total_tip=Coalesce(Sum('amount'), 0.0, output_field=models.DecimalField()),
+        total_gratuity=Coalesce(Sum('gratuity'), 0.0, output_field=models.DecimalField())
+    )
+    total_monthly_tip = monthly_aggregation['total_tip']
+    total_monthly_gratuity = monthly_aggregation['total_gratuity']
+
+    # Create a dictionary for quick lookup in calendar generation
+    tip_dict = {tip.date.date(): tip for tip in monthly_tips}
 
     # --- Calendar Grid Generation ---
     cal = calendar.Calendar(firstweekday=6) # Sunday as first day
@@ -119,72 +125,70 @@ def user_tips(request, year=None, month=None):
     for week_days in cal.monthdatescalendar(year, month):
         week_data = []
         for day_date in week_days:
-            # Check if the day belongs to the current month
             if day_date.month == month:
-                tip_for_day = tip_dict.get(day_date) # Look up tip using the date object
+                tip_for_day = tip_dict.get(day_date)
                 week_data.append({
-                    'day': day_date.day, 
-                    'tip': tip_for_day, 
-                    'date': day_date.strftime('%Y-%m-%d') # Full date string
+                    'day': day_date.day,
+                    'tip': tip_for_day,
+                    'date': day_date.strftime('%Y-%m-%d')
                 })
             else:
-                # Day is outside the current month
-                week_data.append(None) 
+                week_data.append(None)
         weeks.append(week_data)
 
 
-    # --- Paycheck Calculation Logic ---
+    # --- Paycheck Calculation Logic (Based ONLY on Anchor Date) ---
     paycheck_cycle, created = PaycheckCycle.objects.get_or_create(user=request.user)
-    paycheck_start_date = None
-    paycheck_end_date = None
-    paycheck_day = None # Estimated day user gets paid
-    recent_total_tip = 0
-    recent_total_gratuity = 0
-    paycheck_total = 0
+    paycheck_anchor_date = None # The user's configured start date
+    target_cycle_start_date = None # Start date of the cycle beginning on the anchor date
+    target_cycle_end_date = None   # End date of the cycle beginning on the anchor date
+    paycheck_day_display = None    # The end date to display in the template
+    recent_total_tip = 0.0
+    recent_total_gratuity = 0.0
+    paycheck_total = 0.0
 
     if paycheck_cycle.start_date and paycheck_cycle.frequency:
-        paycheck_start_date = paycheck_cycle.start_date
-        
-        # Find the most recent cycle start date that is on or before today
-        today_date = date.today()
-        days_diff = (today_date - paycheck_start_date).days
-        
+        paycheck_anchor_date = paycheck_cycle.start_date
+
+        # Determine cycle length based on frequency
         if paycheck_cycle.frequency == PaycheckCycle.PayFrequency.WEEKLY:
             cycle_length = 7
-            pay_delay = 5 # Example: paid 5 days after cycle ends
         elif paycheck_cycle.frequency == PaycheckCycle.PayFrequency.BIWEEKLY:
             cycle_length = 14
-            pay_delay = 5 # Example: paid 5 days after cycle ends
         else:
-            cycle_length = 0 # Should not happen with current setup
+            cycle_length = 0
 
-        if cycle_length > 0 and days_diff >= 0:
-            # Calculate how many full cycles have passed since the initial start date
-            num_cycles_passed = days_diff // cycle_length
-            # Calculate the start date of the *current* or *most recently ended* cycle
-            current_cycle_start_date = paycheck_start_date + timedelta(days=num_cycles_passed * cycle_length)
-            
-            # Now calculate the end date and payday for *that* specific cycle
-            paycheck_end_date = current_cycle_start_date + timedelta(days=cycle_length - 1)
-            paycheck_day = paycheck_end_date + timedelta(days=pay_delay)
+        if cycle_length > 0:
+            # --- MODIFIED LOGIC ---
+            # The start date IS the anchor date
+            target_cycle_start_date = paycheck_anchor_date
+            # The end date is calculated directly from the anchor date
+            target_cycle_end_date = target_cycle_start_date + timedelta(days=cycle_length - 1)
+            # The date to display is the end date of this specific cycle
+            paycheck_day_display = target_cycle_end_date + timedelta(days=5)
+            # --- END OF MODIFIED LOGIC ---
 
-            # Filter tips within the calculated cycle range
+            # Filter tips within the target cycle range
             recent_tips = Tip.objects.filter(
                 user=request.user,
-                date__date__range=[current_cycle_start_date, paycheck_end_date]
+                date__date__range=[target_cycle_start_date, target_cycle_end_date]
             )
-            recent_total_tip = recent_tips.aggregate(Sum('amount'))['amount__sum'] or 0
-            recent_total_gratuity = recent_tips.aggregate(Sum('gratuity'))['gratuity__sum'] or 0
+
+            # Aggregate tips for the target cycle
+            cycle_aggregation = recent_tips.aggregate(
+                total_tip=Coalesce(Sum('amount'), 0.0, output_field=models.DecimalField()),
+                total_gratuity=Coalesce(Sum('gratuity'), 0.0, output_field=models.DecimalField())
+            )
+            recent_total_tip = cycle_aggregation['total_tip']
+            recent_total_gratuity = cycle_aggregation['total_gratuity']
             paycheck_total = recent_total_tip + recent_total_gratuity
-        else:
-             # Start date is in the future or cycle length is invalid
-             pass
-    else:
-        # Cycle not set
-        pass
+            # No 'else' needed here as we aren't checking against today_date anymore
+
+    # else: # Cycle not set or frequency invalid - totals remain 0
 
 
     # --- Context ---
+    # Make sure to update the context key name if you changed the variable name
     context = {
         "weeks": weeks,
         "year": year,
@@ -196,12 +200,11 @@ def user_tips(request, year=None, month=None):
         "next_month": next_month,
         "total_monthly_tip": total_monthly_tip,
         "total_monthly_gratuity": total_monthly_gratuity,
-        # Paycheck details
         "recent_total_tip": recent_total_tip,
         "recent_total_gratuity": recent_total_gratuity,
         "paycheck_total": paycheck_total,
-        "paycheck_day": paycheck_day, 
-        "paycheck_cycle": paycheck_cycle, 
+        "paycheck_day": paycheck_day_display, # Use the new variable name for clarity
+        "paycheck_cycle": paycheck_cycle,
     }
     return render(request, "myapp/user_tips.html", context)
 

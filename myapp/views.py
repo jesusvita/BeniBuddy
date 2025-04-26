@@ -15,7 +15,7 @@ from django.db import models
 def home(request):
     if request.user.is_authenticated:
         return redirect('user_tips')  # If logged in, go to tips page
-    return render(request, 'myapp/home.html')  # Show login screen
+    return render(request, 'myapp/accounts/login.html')  # Show login screen
 
 def signup(request):
     if request.method == 'POST':

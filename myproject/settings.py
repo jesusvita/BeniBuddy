@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -128,3 +129,32 @@ LOGIN_URL = '/accounts/login/'
 
 LOGIN_REDIRECT_URL = '/your-tips/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+
+
+
+# --- Email Settings for Sending Real Emails (Example: Gmail) ---
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+# --- Configure these for your specific email provider ---
+EMAIL_HOST = 'smtp.gmail.com'  # Or your provider's SMTP server
+EMAIL_PORT = 587               # Common port for TLS (Gmail uses 587)
+                               # Use 465 for SSL if required by your provider
+EMAIL_USE_TLS = True           # Use True for TLS (Port 587)
+EMAIL_USE_SSL = False          # Use True for SSL (Port 465), usually not both TLS and SSL
+
+# --- Credentials (USE ENVIRONMENT VARIABLES!) ---
+# NEVER hardcode your email password directly in settings.py
+# Set these variables in your operating system or deployment environment
+EMAIL_HOST_USER = os.environ.get('EMAIL_USER')      # Your full email address (e.g., 'your_email@gmail.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')  # Your email password or App Password (see below)
+
+# --- Default Sender ---
+# This is the 'From' address emails will appear to come from
+# Often the same as EMAIL_HOST_USER, but can be different if your provider allows
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
+# Optional: Set a specific server email for admin error reports
+# SERVER_EMAIL = EMAIL_HOST_USER
+# ADMINS = [('Your Name', 'your_personal_email@example.com')] # For error reports

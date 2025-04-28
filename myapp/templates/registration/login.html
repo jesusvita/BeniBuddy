@@ -3,7 +3,7 @@
 {% block content %}
 <div class="rounded min-h-screen flex items-center justify-center bg-stone-900 ">
   <div class="bg-neutral-950 p-8 rounded-xl shadow-xl w-full max-w-md">
-    
+
     <form method="post" class="space-y-5">
       {% csrf_token %}
 
@@ -23,7 +23,7 @@
         <p class="text-[#881600] text-sm font-semibold">Invalid username or password.</p>
       {% endif %}
 
-      
+
 
       <button type="submit"
               class="w-full bg-[#881600] text-white py-2 px-4 rounded-full hover:bg-red-700 transition duration-200 shadow-md">
@@ -32,16 +32,13 @@
     </form>
     <!-- 👇 Signup link added here -->
     <p class="mt-6 text-center text-sm text-gray-300">
-        Don't have an account? 
+        Don't have an account?
         <a href="{% url 'signup' %}" class="text-red-500 font-medium hover:underline">Signup</a>
     </p>
 
-    <div class="mt-4 text-sm text-center">
-      <a href="{% url 'password_reset' %}" class="font-small text-red-600 hover:text-red-800">
-        Forgot your password?
-      </a>
-    </div>
-    
+
+
+
   </div>
 </div>
 {% endblock %}

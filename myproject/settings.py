@@ -29,7 +29,17 @@ SECRET_KEY = os.environ.get('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
+
+# --- CORRECT THIS LINE ---
+# Reads ALLOWED_HOSTS from .env, splits by comma, defaults to empty string before split
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+
+# Optional but recommended: Remove any empty strings resulting from the split
+ALLOWED_HOSTS = [host for host in ALLOWED_HOSTS if host]
+# --- END CORRECTION ---
+
+# ... rest of settings ...
+
 
 
 # Application definition
@@ -59,7 +69,7 @@ ROOT_URLCONF = 'myproject.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': ['templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -80,10 +90,19 @@ WSGI_APPLICATION = 'myproject.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR.parent / os.environ.get('DATABASE_NAME', 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('DATABASE_NAME'),
+        'USER': os.environ.get('DATABASE_USER'),
+        'PASSWORD': os.environ.get('DATABASE_PASSWORD'),
+        'HOST': os.environ.get('DATABASE_HOST'),
+        'PORT': '3306',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'charset': 'utf8mb4',
+        },
     }
 }
+
 
 
 # Password validation
@@ -122,6 +141,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / "myapp/static"]
+STATIC_ROOT = 'staticfiles/' # Creates 'staticfiles' in /home/JesusVita/beniLife/
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -161,3 +181,14 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 # Optional: Set a specific server email for admin error reports
 # SERVER_EMAIL = EMAIL_HOST_USER
 # ADMINS = [('Your Name', 'your_personal_email@example.com')] # For error reports
+
+# --- HTTPS Enforcement Settings (Add these) ---
+# Make sure DEBUG is False in your .env file on the server!
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True       # Redirects all HTTP requests to HTTPS
+    SESSION_COOKIE_SECURE = True     # Only send session cookies over HTTPS
+    CSRF_COOKIE_SECURE = True        # Only send CSRF cookies over HTTPS
+    # Optional: HSTS Settings (for advanced security, research before enabling)
+    # SECURE_HSTS_SECONDS = 31536000  # 1 year
+    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # SECURE_HSTS_PRELOAD = True

@@ -15,7 +15,7 @@ from django.db import models
 def home(request):
     if request.user.is_authenticated:
         return redirect('user_tips')  # If logged in, go to tips page
-    return render(request, 'myapp/accounts/login.html')  # Show login screen
+    return render(request, 'registration/login.html')  # Show login screen
 
 def signup(request):
     if request.method == 'POST':
@@ -48,21 +48,21 @@ def set_pay_cycle(request):
                 return JsonResponse({'status': 'success', 'message': 'Pay cycle updated successfully!'})
             else:
                 # Should ideally not happen if triggered from modal, but good fallback
-                return redirect('user_tips') 
+                return redirect('user_tips')
         else: # Form invalid
             if is_ajax:
                 return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
             else:
                  # Re-render the page with errors? Or just redirect? Redirect is simpler for now.
-                return redirect('user_tips') 
+                return redirect('user_tips')
 
     # --- Handle GET requests (Primarily for AJAX fetching current settings) ---
     elif request.method == 'GET':
         if is_ajax:
-            # Return current settings 
+            # Return current settings
             return JsonResponse({
                 'start_date': cycle.start_date.strftime('%Y-%m-%d') if cycle.start_date else None,
-                'frequency': cycle.frequency 
+                'frequency': cycle.frequency
             })
         else:
             # Non-AJAX GET doesn't make sense here, redirect to main page
@@ -217,20 +217,20 @@ def add_tip(request):
         form = TipForm(request.POST)
         if form.is_valid():
             tip = form.save(commit=False)
-            tip.user = request.user 
-            
+            tip.user = request.user
+
             # Ensure date is stored correctly (handle potential timezone issues if needed)
             # If Tip.date is DateTimeField, you might want to combine date and a default time
             cleaned_date = form.cleaned_data['date']
             if isinstance(cleaned_date, date) and not isinstance(cleaned_date, datetime):
                  # Combine with midnight time if model field is DateTimeField
                  # Adjust timezone logic if necessary (e.g., using settings.TIME_ZONE)
-                 tip.date = datetime.combine(cleaned_date, datetime.min.time()) 
+                 tip.date = datetime.combine(cleaned_date, datetime.min.time())
             else:
                  tip.date = cleaned_date # Assume it's already datetime or handled correctly
 
             tip.save()
-            
+
             if is_ajax:
                 return JsonResponse({'status': 'success', 'message': 'Tip added successfully!'})
             else:
@@ -238,11 +238,11 @@ def add_tip(request):
                 return redirect('user_tips', year=tip.date.year, month=tip.date.month)
         else: # Form is invalid
             if is_ajax:
-                return JsonResponse({'status': 'error', 'errors': form.errors}, status=400) 
+                return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
             else:
                 # Re-render the full form page with errors
                 # Pass context if your template needs it
-                return render(request, 'myapp/add_tip_form.html', {'form': form}) 
+                return render(request, 'myapp/add_tip_form.html', {'form': form})
 
     # Handle GET request (Show the form)
     elif request.method == 'GET':
@@ -251,12 +251,12 @@ def add_tip(request):
         if date_str:
             try:
                 # Use date directly, form widget handles display format
-                initial_data['date'] = datetime.strptime(date_str, '%Y-%m-%d').date() 
+                initial_data['date'] = datetime.strptime(date_str, '%Y-%m-%d').date()
             except ValueError:
-                pass 
-        
+                pass
+
         form = TipForm(initial=initial_data)
-        
+
         # If AJAX GET (less common for add, but possible), maybe return form HTML fragment?
         # For now, assume GET is for a full page load if not AJAX
         if is_ajax:
@@ -264,7 +264,7 @@ def add_tip(request):
              return JsonResponse({'error': 'AJAX GET not fully supported for add form'}, status=405)
         else:
              # Render the full page template
-             return render(request, 'myapp/add_tip_form.html', {'form': form}) 
+             return render(request, 'myapp/add_tip_form.html', {'form': form})
 
 @login_required
 @require_http_methods(["GET", "POST"]) # Edit uses GET (fetch data/show form) and POST (submit changes)
@@ -278,7 +278,7 @@ def edit_tip(request, tip_id):
             return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
         else:
             # Render a forbidden page or redirect
-            return HttpResponseForbidden("You don't have permission to edit this tip.") 
+            return HttpResponseForbidden("You don't have permission to edit this tip.")
 
     # --- Handle POST (Save Changes) ---
     if request.method == "POST":
@@ -296,7 +296,7 @@ def edit_tip(request, tip_id):
                 return JsonResponse({'status': 'success', 'message': 'Tip updated successfully!'})
             else:
                 # Redirect back to the month the tip is in
-                return redirect('user_tips', year=tip.date.year, month=tip.date.month) 
+                return redirect('user_tips', year=tip.date.year, month=tip.date.month)
         else: # Form is invalid
             if is_ajax:
                 return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
@@ -309,7 +309,7 @@ def edit_tip(request, tip_id):
         if is_ajax:
             # Return tip data as JSON for modal population
             tip_data = model_to_dict(tip, fields=['id', 'amount', 'gratuity', 'date', 'note'])
-            tip_data['amount'] = str(tip_data['amount']) 
+            tip_data['amount'] = str(tip_data['amount'])
             tip_data['gratuity'] = str(tip_data['gratuity']) if tip_data['gratuity'] is not None else '0.00' # Handle potential None for gratuity
 
             # Format date consistently (send ISO format for JS Date object or YYYY-MM-DD)
@@ -353,14 +353,14 @@ def delete_tip(request, tip_id):
             return JsonResponse({'status': 'error', 'message': 'Could not delete tip due to a server error.'}, status=500)
 
     # --- Handle POST request (from confirmation form) ---
-    elif request.method == 'POST': 
+    elif request.method == 'POST':
         try:
             tip_year = tip.date.year
             tip_month = tip.date.month
             tip.delete()
             # Add success message for non-AJAX if using Django messages framework
-            # messages.success(request, 'Tip deleted successfully.') 
-            return redirect('user_tips', year=tip_year, month=tip_month) 
+            # messages.success(request, 'Tip deleted successfully.')
+            return redirect('user_tips', year=tip_year, month=tip_month)
         except Exception as e:
              # Log the error e
              print(f"Error deleting tip {tip_id} via POST: {e}")

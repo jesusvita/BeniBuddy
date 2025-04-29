@@ -15,11 +15,15 @@
         theme: {
           extend: {
             colors: {
-              primary: '#880808',
+              primary: '#880808', // Your primary red
               lightPink: '#E2B4BD',
               softBlue: '#93A8AC',
               deepBlue: '#424B54',
               paleWhite: '#fdfdfd',
+            },
+            fontFamily: {
+              'sans': ['ui-sans-serif', 'system-ui'],
+              'benibuddy': ['Anton', 'sans-serif']
             }
           }
         }
@@ -35,32 +39,172 @@
         border-bottom: 1px solid rgba(255,255,255,0.1);
         margin-top: 0.5rem;
       }
+      /* Style for drawer menu items */
+      .drawer-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 0.75rem 1.5rem; /* Adjust padding */
+        color: #fdfdfd; /* paleWhite */
+        transition: background-color 0.15s ease-in-out;
+        border-radius: 0.375rem; /* rounded-md */
+        margin-bottom: 0.25rem; /* Add some space between items */
+      }
+      .drawer-item:hover {
+        background-color: #B91C1C; /* primary */
+      }
+      .drawer-item button {
+         width: 100%;
+         text-align: left;
+         background: none;
+         border: none;
+         padding: 0;
+         cursor: pointer;
+         color: inherit;
+      }
     </style>
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
   </head>
 
-<body class="bg-stone-900  text-white min-h-screen">
+<body class="bg-stone-900 text-white min-h-screen">
 
     <!-- Navbar -->
     <nav class="bg-red-900 text-white shadow">
       <div class="container mx-auto flex justify-between items-center px-4 py-3">
-        <a href="{% url 'user_tips' %}" class="lightPink font-bold text-xl tracking-wide">
-          BeniBuddy
+        <a href="{% url 'user_tips' %}" class="lightPink text-xl tracking-wide font-benibuddy">
+          BENIBUDDY
         </a>
+
         {% if user.is_authenticated %}
-          <form method="post" action="{% url 'logout' %}">
-            {% csrf_token %}
-            <button type="submit" class="bg-primary hover:bg-red-800 text-white px-4 py-1 rounded-full transition">
-              Logout
-            </button>
-          </form>
+          <!-- Hamburger Button (Only the button remains here) -->
+          <button id="hamburger-button" type="button" class="p-2 rounded-md hover:bg-primary focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white z-50" aria-expanded="false" aria-controls="side-drawer">
+            <span class="sr-only">Open user menu</span>
+            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+          </button>
         {% endif %}
       </div>
     </nav>
 
     <!-- Page content -->
-    <div class="container mx-auto px-4 py-6">
+    <div class="container mx-auto px-1 py-4">
         {% block content %}{% endblock %}
     </div>
+
+    {% if user.is_authenticated %}
+      <!-- Overlay -->
+      <div id="menu-overlay"
+           class="fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 ease-in-out opacity-0 pointer-events-none">
+      </div>
+
+      <!-- Side Drawer -->
+      <div id="side-drawer"
+           class="fixed top-0 right-0 h-full w-64 bg-red-900 text-paleWhite shadow-xl z-50
+                  transform translate-x-full transition-transform duration-300 ease-in-out p-4"
+           role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+
+        <!-- Drawer Header (Optional) -->
+        <div class="flex justify-between items-center mb-6">
+          <h2 id="drawer-title" class="text-lg font-semibold lightPink">Menu</h2>
+          <button id="close-drawer-button" type="button" class="p-1 rounded-md text-paleWhite hover:bg-primary focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
+            <span class="sr-only">Close menu</span>
+            <!-- Heroicon name: outline/x -->
+            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Drawer Content -->
+        <nav>
+          <!-- Logout Form/Button -->
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="drawer-item">
+              Logout
+            </button>
+          </form>
+          <!-- Add other menu items here as needed -->
+          <!-- <a href="#" class="drawer-item">Profile</a> -->
+          <!-- <a href="#" class="drawer-item">Settings</a> -->
+        </nav>
+      </div>
+    {% endif %}
+
+
+    {% block javascript %}
+    {# --- MOVED Side Drawer Toggle Script INSIDE the block --- #}
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // --- Side Drawer Logic ---
+        const hamburgerButton = document.getElementById('hamburger-button');
+        const sideDrawer = document.getElementById('side-drawer');
+        const menuOverlay = document.getElementById('menu-overlay');
+        const closeDrawerButton = document.getElementById('close-drawer-button');
+
+        function openDrawer() {
+          // Ensure elements exist (especially if user is not authenticated)
+          if (!sideDrawer || !menuOverlay) return;
+          menuOverlay.classList.remove('opacity-0', 'pointer-events-none');
+          menuOverlay.classList.add('opacity-100', 'pointer-events-auto');
+          sideDrawer.classList.remove('translate-x-full');
+          sideDrawer.classList.add('translate-x-0');
+          if (hamburgerButton) hamburgerButton.setAttribute('aria-expanded', 'true');
+        }
+
+        function closeDrawer() {
+          // Ensure elements exist
+          if (!sideDrawer || !menuOverlay) return;
+          menuOverlay.classList.add('opacity-0', 'pointer-events-none');
+          menuOverlay.classList.remove('opacity-100', 'pointer-events-auto');
+          sideDrawer.classList.add('translate-x-full');
+          sideDrawer.classList.remove('translate-x-0');
+          if (hamburgerButton) hamburgerButton.setAttribute('aria-expanded', 'false');
+        }
+
+        // Add listeners only if the elements exist (i.e., user is authenticated)
+        if (hamburgerButton) {
+          hamburgerButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const isExpanded = hamburgerButton.getAttribute('aria-expanded') === 'true';
+            if (isExpanded) {
+              closeDrawer();
+            } else {
+              openDrawer();
+            }
+          });
+        }
+
+        if (closeDrawerButton) {
+          closeDrawerButton.addEventListener('click', closeDrawer);
+        }
+
+        if (menuOverlay) {
+          menuOverlay.addEventListener('click', closeDrawer);
+        }
+
+        // Keydown listener can be global
+        document.addEventListener('keydown', (event) => {
+          // Check if drawer exists and is open before closing
+          if (event.key === 'Escape' && sideDrawer && !sideDrawer.classList.contains('translate-x-full')) {
+            closeDrawer();
+          }
+        });
+
+        // --- End of Side Drawer Logic ---
+
+        // --- Child template JS will be inserted here by Django ---
+        // (No need for block.super unless child needs base logic AND its own)
+
+      });
+    </script>
+    {% endblock %}
+
+    {# REMOVED the separate script tag that was here #}
 
 </body>
 </html>

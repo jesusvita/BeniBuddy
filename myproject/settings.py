@@ -100,7 +100,6 @@ if DEBUG:
     }
 else:
     # --- PRODUCTION SETTINGS (MySQL - Reads from .env) ---
-    print("DEBUG is False: Using MySQL database.") # Optional: Add print for confirmation
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',

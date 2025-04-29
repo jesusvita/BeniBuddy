@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% block title %}Your Tips - {{ month_name }} {{ year }}{% endblock %}
 
-{% block content %}
-<div class="rounded min-h-screen px-4 py-6 bg-gradient-to-b from-neutral-950 to-stone-900 text-white">
+{% block content %} {# Start of content block #}
+<div class="rounded min-h-screen px-1 py-6 bg-gradient-to-b from-neutral-950 to-stone-900 text-white">
 
   <!-- Header Navigation -->
-  <div class="flex flex-wrap px-2 sm:px-4 justify-between items-center gap-2 mb-4">
+  <div class="flex flex-wrap px-4 sm:px-8 justify-between items-center gap-2 mb-4">
 
     <!-- Previous -->
     <a href="{% url 'user_tips' prev_year prev_month %}"
@@ -17,7 +17,7 @@
 
     <!-- Month & Totals -->
     <div class="text-center">
-      <h2 class="text-2xl font-bold lightPink">{{ month_name }} {{ year }}</h2>
+      <h2 class="text-2xl font-bold lightPink ">{{ month_name }} {{ year }}</h2>
       <div class="text-sm">
         <span class="text-green-300 font-medium">Tips: ${{ total_monthly_tip|floatformat:2 }}</span> &nbsp;|&nbsp;
         <span class="text-blue-300 font-medium">Gratuity: ${{ total_monthly_gratuity|floatformat:2 }}</span>
@@ -112,12 +112,11 @@
           <button id="closeModalBtn" type="button" class="text-gray-500 hover:text-gray-800">&times;</button>
       </div>
 
-      <form id="addTipForm" method="POST" action="{% url 'add_tip' %}"> <!-- Action might point to a dedicated API endpoint -->
+      <form id="addTipForm" method="POST" action="{% url 'add_tip' %}">
           {% csrf_token %}
           <input type="hidden" id="modalTipDate" name="date">
 
           <!-- Your TipForm fields go here -->
-          <!-- Example: -->
           <div class="mb-4">
               <label for="modalTipAmount" class="block text-sm font-medium text-gray-700">Tip Amount</label>
               <input type="number" step="0.01" name="amount" id="modalTipAmount" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
@@ -145,9 +144,8 @@
           <button id="closeEditModalBtn" type="button" class="text-gray-500 hover:text-gray-800">&times;</button>
       </div>
 
-      <form id="editTipForm" method="POST"> <!-- Action URL will be set dynamically by JS -->
+      <form id="editTipForm" method="POST">
           {% csrf_token %}
-          <!-- Hidden input for the date - might not be editable here, but good to have -->
           <input type="hidden" id="editModalTipDate" name="date">
 
           <!-- TipForm fields will be populated by JS -->
@@ -166,11 +164,9 @@
           <!-- Add other fields if needed -->
 
           <div class="mt-6 flex justify-between items-center">
-              {# Delete Button - Pointing to the original delete URL for now #}
-              {# We might make this AJAX later too, but start simple #}
               <a href="#" id="deleteTipLink" class="text-red-600 hover:text-red-800 text-sm">Delete Tip</a>
 
-              <div> {# Wrap buttons for alignment #}
+              <div>
                   <button type="button" id="cancelEditModalBtn" class="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancel</button>
                   <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-800 hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700">Save Changes</button>
               </div>
@@ -219,7 +215,6 @@
       <div class="mb-6">
           <p class="text-sm text-gray-700">Are you sure you want to permanently delete this tip?</p>
           <p class="text-sm text-red-600 font-medium">This action cannot be undone.</p>
-          {# We can optionally add details here later if needed, like date/amount #}
       </div>
 
       <div class="mt-6 flex justify-end">
@@ -229,15 +224,16 @@
           <button type="button" id="confirmDeleteBtn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
               Delete Tip
           </button>
-          {# Hidden input or data attribute to store the URL temporarily #}
           <input type="hidden" id="confirmDeleteUrl">
       </div>
   </div>
 </div>
 
+{% endblock %} {# End of content block #}
 
 
-{% block javascript %}
+{% block javascript %} {# Start of javascript block - MOVED HERE #}
+{{ block.super }}
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     // --- Get Add Tip Modal elements ---
@@ -358,14 +354,12 @@
     function openEditModal(tipData) {
         if (!editModal || !editTipForm || !deleteTipLink) return;
 
-        // Ensure tipData.date is treated correctly (might be ISO string)
         let datePart = tipData.date;
         if (datePart && datePart.includes('T')) {
-            datePart = datePart.split('T')[0]; // Extract YYYY-MM-DD if it's ISO format
+            datePart = datePart.split('T')[0];
         }
         editModalTipDateInput.value = datePart;
         editModalTipAmountInput.value = tipData.amount;
-        // Handle potential null/undefined gratuity from JSON
         editModalTipGratuityInput.value = tipData.gratuity != null ? tipData.gratuity : '';
         editModalTipNoteInput.value = tipData.note || '';
 
@@ -409,7 +403,7 @@
             const csrfTokenInput = editTipForm.querySelector('input[name="csrfmiddlewaretoken"]');
 
             if (!csrfTokenInput) {
-                console.error('CSRF token input not found in edit form!'); // Keep essential error logs
+                console.error('CSRF token input not found in edit form!');
                 alert('Error: Could not submit form. Security token missing.');
                 return;
             }
@@ -443,11 +437,11 @@
                 location.reload();
                 } else {
                 alert(data.message || 'An unexpected error occurred while saving.');
-                console.error('Server indicated failure:', data); // Keep essential error logs
+                console.error('Server indicated failure:', data);
                 }
             })
             .catch(error => {
-                console.error('Error submitting edit form:', error); // Keep essential error logs
+                console.error('Error submitting edit form:', error);
                 if (error.validationErrors) {
                 let errorMessages = "Please correct the following errors:\n";
                 for (const field in error.validationErrors) {
@@ -463,20 +457,20 @@
             });
         });
     } else {
-        console.error('Edit tip form not found.'); // Keep essential error logs
+        console.error('Edit tip form not found.');
     }
 
-        // --- Get Confirm Delete Modal Elements ---
-        const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+    // --- Get Confirm Delete Modal Elements ---
+    const confirmDeleteModal = document.getElementById('confirmDeleteModal');
     const closeConfirmDeleteModalBtn = document.getElementById('closeConfirmDeleteModalBtn');
     const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-    const confirmDeleteUrlInput = document.getElementById('confirmDeleteUrl'); // Input to store URL
+    const confirmDeleteUrlInput = document.getElementById('confirmDeleteUrl');
 
     // --- Function to open the Confirm Delete Modal ---
     function openConfirmDeleteModal(url) {
         if (!confirmDeleteModal || !confirmDeleteUrlInput) return;
-        confirmDeleteUrlInput.value = url; // Store the URL to delete
+        confirmDeleteUrlInput.value = url;
         confirmDeleteModal.classList.remove('hidden');
     }
 
@@ -484,7 +478,7 @@
     function closeConfirmDeleteModal() {
         if (!confirmDeleteModal || !confirmDeleteUrlInput) return;
         confirmDeleteModal.classList.add('hidden');
-        confirmDeleteUrlInput.value = ''; // Clear the URL
+        confirmDeleteUrlInput.value = '';
     }
 
     // --- Event listeners for closing the Confirm Delete modal ---
@@ -496,35 +490,33 @@
     }
     if (confirmDeleteModal) {
         confirmDeleteModal.addEventListener('click', (event) => {
-            if (event.target === confirmDeleteModal) { // Click on overlay
+            if (event.target === confirmDeleteModal) {
                 closeConfirmDeleteModal();
             }
         });
     }
 
-    // --- MODIFIED: Handle Delete Tip Link Click (Opens Confirmation Modal) ---
+    // --- Handle Delete Tip Link Click (Opens Confirmation Modal) ---
     if (deleteTipLink) {
         deleteTipLink.addEventListener('click', (event) => {
-            event.preventDefault(); // Stop the link from navigating
-
-            const url = deleteTipLink.href; // Get the URL from the link itself
+            event.preventDefault();
+            const url = deleteTipLink.href;
             if (url) {
-                openConfirmDeleteModal(url); // Open the custom confirmation modal
+                openConfirmDeleteModal(url);
             } else {
                 console.error('Could not get URL from delete link.');
                 alert('Error preparing deletion.');
             }
         });
     } else {
-        console.error('Delete tip link not found.'); // Keep essential error logs
+        console.error('Delete tip link not found.');
     }
-    // --- END OF MODIFIED DELETE LINK HANDLING ---
 
-    // --- NEW: Handle Actual Deletion from Confirmation Modal ---
+    // --- Handle Actual Deletion from Confirmation Modal ---
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', () => {
-            const url = confirmDeleteUrlInput.value; // Get the stored URL
-            const csrfTokenInput = editTipForm.querySelector('input[name="csrfmiddlewaretoken"]'); // Get CSRF from the edit form
+            const url = confirmDeleteUrlInput.value;
+            const csrfTokenInput = editTipForm.querySelector('input[name="csrfmiddlewaretoken"]');
 
             if (!url) {
                 console.error('No delete URL found in confirmation modal.');
@@ -540,7 +532,6 @@
             }
             const csrfToken = csrfTokenInput.value;
 
-            // Optional: Add loading state to button
             confirmDeleteBtn.disabled = true;
             confirmDeleteBtn.textContent = 'Deleting...';
 
@@ -564,9 +555,9 @@
             })
             .then(data => {
                 if (data.status === 'success') {
-                    closeConfirmDeleteModal(); // Close confirmation modal
-                    closeEditModal();       // Close the edit modal as well
-                    location.reload();      // Reload the page
+                    closeConfirmDeleteModal();
+                    closeEditModal();
+                    location.reload();
                 } else {
                     console.error('Server indicated deletion failure:', data);
                     alert(data.message || 'An unexpected error occurred while deleting.');
@@ -577,10 +568,8 @@
                 alert(`Could not delete tip: ${error.message}`);
             })
             .finally(() => {
-                 // Reset button state
                  confirmDeleteBtn.disabled = false;
                  confirmDeleteBtn.textContent = 'Delete Tip';
-                 // Ensure modal is closed even if fetch failed before success check
                  if (!confirmDeleteModal.classList.contains('hidden')) {
                      closeConfirmDeleteModal();
                  }
@@ -589,9 +578,6 @@
     } else {
         console.error('Confirm delete button not found.');
     }
-    // --- END OF ACTUAL DELETION HANDLING ---
-
-
 
     // --- Event Delegation on Calendar Grid (Handles BOTH Add and Edit) ---
     const calendarGrid = document.querySelector('.grid.grid-cols-7.sm\\:grid-cols-7');
@@ -604,15 +590,14 @@
                 event.preventDefault();
                 const date = addButton.dataset.date;
                 if (date) {
-                    openModal(date); // Open Add Tip modal
+                    openModal(date);
                 } else {
-                    console.error('Could not find date on add button.'); // Keep essential error logs
+                    console.error('Could not find date on add button.');
                 }
-            } else if (editButton) { // Handle edit button click
+            } else if (editButton) {
                 event.preventDefault();
                 const tipId = editButton.dataset.tipId;
                 if (tipId) {
-                    // Fetch existing tip data via AJAX GET
                     fetch(`/edit-tip/${tipId}/`, {
                         method: 'GET',
                         headers: {
@@ -628,23 +613,23 @@
                     })
                     .then(data => {
                         if (data.tip) {
-                            openEditModal(data.tip); // Open Edit Tip modal with data
+                            openEditModal(data.tip);
                         } else {
-                            console.error('Tip data not found in response:', data); // Keep essential error logs
+                            console.error('Tip data not found in response:', data);
                             alert('Error: Could not load tip details.');
                         }
                     })
                     .catch(error => {
-                        console.error('Error fetching tip data:', error); // Keep essential error logs
+                        console.error('Error fetching tip data:', error);
                         alert('Error: Could not load tip details. Please try again.');
                     });
                 } else {
-                    console.error('Could not find tip ID on edit button.'); // Keep essential error logs
+                    console.error('Could not find tip ID on edit button.');
                 }
             }
         });
     } else {
-        console.error('Calendar grid container not found for event delegation.'); // Keep essential error logs
+        console.error('Calendar grid container not found for event delegation.');
     }
 
     // --- Get Pay Cycle Modal Elements ---
@@ -674,7 +659,7 @@
             openPayCycleModal();
         });
     } else {
-        console.error('Open Pay Cycle Modal button not found.'); // Keep essential error logs
+        console.error('Open Pay Cycle Modal button not found.');
     }
 
     if (closePayCycleBtn) {
@@ -701,7 +686,7 @@
             const csrfTokenInput = payCycleForm.querySelector('input[name="csrfmiddlewaretoken"]');
 
             if (!csrfTokenInput) {
-                console.error('CSRF token input not found in pay cycle form!'); // Keep essential error logs
+                console.error('CSRF token input not found in pay cycle form!');
                 alert('Error: Could not submit form. Security token missing.');
                 return;
             }
@@ -733,14 +718,14 @@
             .then(data => {
                 if (data.status === 'success') {
                     closePayCycleModal();
-                    location.reload(); // Reload to see updated estimate
+                    location.reload();
                 } else {
                     alert(data.message || 'An unexpected error occurred.');
-                    console.error('Server indicated failure:', data); // Keep essential error logs
+                    console.error('Server indicated failure:', data);
                 }
             })
             .catch(error => {
-                console.error('Error submitting pay cycle form:', error); // Keep essential error logs
+                console.error('Error submitting pay cycle form:', error);
                 if (error.validationErrors) {
                     let errorMessages = "Please correct the following errors:\n";
                     for (const field in error.validationErrors) {
@@ -757,14 +742,12 @@
             });
         });
     } else {
-        console.error('Edit pay cycle form not found.'); // Keep essential error logs
+        console.error('Edit pay cycle form not found.');
     }
     // --- END OF PAY CYCLE MODAL JS ---
 
-  }); // <-- SINGLE Closing parenthesis and curly brace for DOMContentLoaded
+  });
 </script>
-{% endblock %}
+{% endblock %} 
 
 
-
-{% endblock %}

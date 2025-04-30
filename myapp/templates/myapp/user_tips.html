@@ -53,18 +53,18 @@
             {% if day.tip %}
             <a href="{% url 'edit_tip' day.tip.id %}"
               data-tip-id="{{ day.tip.id }}"
-              class="edit-tip-button block h-14 sm:h-16 rounded-lg p-1 bg-white text-gray-700 shadow hover:bg-gray-100 transition cursor-pointer">
+              class="edit-tip-button block h-14 sm:h-16 rounded-lg bg-white text-gray-700 shadow hover:bg-gray-100 transition cursor-pointer">
               {% else %}
               <a href="{% url 'add_tip' %}?date={{ year }}-{{ month|stringformat:'02d' }}-{{ day.day|stringformat:'02d' }}"
                  data-date="{{ year }}-{{ month|stringformat:'02d' }}-{{ day.day|stringformat:'02d' }}"
-                 class="add-tip-button block h-14 sm:h-16 rounded-lg p-1 bg-white text-gray-700 shadow hover:bg-gray-100 transition cursor-pointer">
+                 class="add-tip-button block h-14 sm:h-16 rounded-lg bg-white text-gray-700 shadow hover:bg-gray-100 transition cursor-pointer">
             {% endif %}
                 <!-- Date Number -->
-                <div class="absolute top-1 left-1 text-[0.6rem] sm:text-xs font-semibold">{{ day.day }}</div>
+                <div class="absolute px-1 text-[0.6rem] sm:text-xs font-semibold">{{ day.day }}</div>
 
                 <!-- Tip Info -->
                 
-                <div class="flex flex-col justify-center items-end  h-full font-semibold pt-1 sm:pt-1">
+                <div class="flex flex-col justify-center items-end  h-full font-semibold pt-3 px-1 sm:pt-1">
                   {% if day.tip %}
                     <div class="font-sans font-[770] text-green-700 text-[0.55rem] sm:text-xs leading-tight sm:leading-normal tabular-nums">
                         ${{ day.tip.amount }}
@@ -81,7 +81,7 @@
                       </div>
                     {% endif %}
                     {% if day.tip.hours_worked > 0 %}
-                      <div class="font-sans font-[700] text-purple-600 text-[0.5rem] sm:text-[0.65rem] leading-tight sm:leading-normal tabular-nums mt-1">
+                      <div class="font-sans font-[700] text-purple-600 text-[0.5rem] sm:text-[0.65rem] leading-tight sm:leading-normal tabular-nums ">
                           Hrs: {{ day.tip.hours_worked }}
                       </div>
                     {% endif %} 

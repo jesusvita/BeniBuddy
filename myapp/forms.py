@@ -21,7 +21,7 @@ class TipForm(forms.ModelForm):
     class Meta:
         model = Tip
         # Add 'date' to this list:
-        fields = ['date', 'amount', 'gratuity', 'note'] 
+        fields = ['date', 'amount', 'gratuity','cash_made', 'hours_worked', 'note'] 
         widgets = {
             # Ensure the widget uses the correct input type (DateInput for DateField, DateTimeInput for DateTimeField)
             # Since your model uses DateTimeField but your input is just date, DateInput is likely fine
@@ -32,6 +32,16 @@ class TipForm(forms.ModelForm):
             # otherwise they default to NumberInput.
             'amount': forms.NumberInput(attrs={'step': '0.01'}),
             'gratuity': forms.NumberInput(attrs={'step': '0.01'}),
+            'cash_made': forms.NumberInput(attrs={'step': '0.01', 'placeholder': '0.00', 'class': 'mt-1 block w-full px-3 py-2 bg-stone-700 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm'}),
+            'hours_worked': forms.NumberInput(attrs={'step': '0.25', 'placeholder': '0.0', 'class': 'mt-1 block w-full px-3 py-2 bg-stone-700 border border-stone-600 rounded-md text-white placeholder-stone-400 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm'}),
+            'note': forms.Textarea(attrs={'rows': 3}),
+        }
+        labels = {
+            'amount': 'Card/Electronic Tips ($)',
+            'gratuity': 'Gratuity ($)', # Added label for consistency
+            'cash_made': 'Cash Made ($)',
+            'hours_worked': 'Hours Worked',
+            'note': 'Note (Optional)', # Added label for consistency
         }
 
     def __init__(self, *args, **kwargs):

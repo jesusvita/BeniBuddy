@@ -19,9 +19,12 @@
     <div class="text-center">
       <h2 class="text-2xl font-bold lightPink ">{{ month_name }} {{ year }}</h2>
       <div class="text-sm">
+        {# TODO: Update these totals if needed to include cash/hours #}
         <span class="text-green-300 font-medium">Tips: ${{ total_monthly_tip|floatformat:2 }}</span> &nbsp;|&nbsp;
         <span class="text-blue-300 font-medium">Gratuity: ${{ total_monthly_gratuity|floatformat:2 }}</span>
-      </div>
+        <br>
+        <span class="text-yellow-400 font-medium">Cash: ${{ total_monthly_cash|floatformat:2 }}</span>
+    </div>
     </div>
 
     <!-- Next -->
@@ -60,16 +63,28 @@
                 <div class="absolute top-1 left-1 text-[0.6rem] sm:text-xs font-semibold">{{ day.day }}</div>
 
                 <!-- Tip Info -->
-                <div class="flex flex-col justify-center items-center h-full font-semibold pt-3 sm:pt-1">
+                
+                <div class="flex flex-col justify-center items-end  h-full font-semibold pt-1 sm:pt-1">
                   {% if day.tip %}
                     <div class="font-sans font-[770] text-green-700 text-[0.55rem] sm:text-xs leading-tight sm:leading-normal tabular-nums">
                         ${{ day.tip.amount }}
                     </div>
                     {% if day.tip.gratuity %}
-                      <div class="font-sans font-[700] text-blue-700 text-[0.5rem] sm:text-[0.65rem] leading-tight sm:leading-normal tabular-nums mt-1">
+                      <div class="font-sans font-[700] text-blue-700 text-[0.5rem] sm:text-[0.65rem] leading-tight sm:leading-normal tabular-nums ">
                           ${{ day.tip.gratuity }}
                       </div>
                     {% endif %}
+                    
+                    {% if day.tip.cash_made > 0 %}
+                      <div class="font-sans font-[700] text-yellow-600 text-[0.5rem] sm:text-[0.65rem] leading-tight sm:leading-normal tabular-nums ">
+                          ${{ day.tip.cash_made }}
+                      </div>
+                    {% endif %}
+                    {% if day.tip.hours_worked > 0 %}
+                      <div class="font-sans font-[700] text-purple-600 text-[0.5rem] sm:text-[0.65rem] leading-tight sm:leading-normal tabular-nums mt-1">
+                          Hrs: {{ day.tip.hours_worked }}
+                      </div>
+                    {% endif %} 
                   {% else %}
                     <div class="text-xs text-gray-400 italic"></div>
                   {% endif %}
@@ -97,9 +112,11 @@
     </div>
 
     <!-- Paycheck Summary -->
+    
     <h3 class="text-sm font-sans font-[770] mb-2">Estimate Paycheck for {{ paycheck_day|date:"m-d" }}</h3>
     <p class="font-sans font-[770] text-green-800 text-lg">Tips: ${{ recent_total_tip|floatformat:2 }}</p>
     <p class="font-sans font-[770] text-blue-800 text-lg">Gratuity: ${{ recent_total_gratuity|floatformat:2 }}</p>
+    <p class="font-sans font-[770] text-purple-800 text-lg">Hours: {{ recent_total_hours|floatformat:2 }}</p>
     <p class="font-sans font-[770] text-black text-xl mt-2 font-semibold">Total: ${{ paycheck_total|floatformat:2 }}</p>
   </div>
 </div>
@@ -116,17 +133,31 @@
           {% csrf_token %}
           <input type="hidden" id="modalTipDate" name="date">
 
-          <!-- Your TipForm fields go here -->
+          <!-- TipForm fields -->
           <div class="mb-4">
-              <label for="modalTipAmount" class="block text-sm font-medium text-gray-700">Tip Amount</label>
+              <label for="modalTipAmount" class="block text-sm font-medium text-gray-700">Card/Electronic Tips ($)</label> {# Label updated for clarity #}
               <input type="number" step="0.01" name="amount" id="modalTipAmount" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
           </div>
           <div class="mb-4">
-              <label for="modalTipGratuity" class="block text-sm font-medium text-gray-700">Gratuity (If you had any)</label>
+              <label for="modalTipGratuity" class="block text-sm font-medium text-gray-700">Gratuity ($)</label> {# Label updated for clarity #}
               <input type="number" step="0.01" name="gratuity" id="modalTipGratuity" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-
           </div>
-          <!-- Add other fields as needed -->
+
+          <!-- START: New Fields for Add Modal -->
+          <div class="mb-4">
+              <label for="modalCashMade" class="block text-sm font-medium text-gray-700">Cash Made ($)</label>
+              <input type="number" step="0.01" name="cash_made" id="modalCashMade" placeholder="0.00" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+          </div>
+          <div class="mb-4">
+              <label for="modalHoursWorked" class="block text-sm font-medium text-gray-700">Hours Worked</label>
+              <input type="number" step="0.25" name="hours_worked" id="modalHoursWorked" placeholder="0.0" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+          </div>
+          <!-- END: New Fields for Add Modal -->
+
+          <div class="mb-4"> {# Added Note field to Add Modal for consistency #}
+              <label for="modalTipNote" class="block text-sm font-medium text-gray-700">Note (Optional)</label>
+              <textarea name="note" id="modalTipNote" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
+          </div>
 
           <div class="mt-6 flex justify-end">
               <button type="button" id="cancelModalBtn" class="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancel</button>
@@ -144,27 +175,38 @@
           <button id="closeEditModalBtn" type="button" class="text-gray-500 hover:text-gray-800">&times;</button>
       </div>
 
-      <form id="editTipForm" method="POST">
+      <form id="editTipForm" method="POST"> {# Action URL set by JS #}
           {% csrf_token %}
           <input type="hidden" id="editModalTipDate" name="date">
 
           <!-- TipForm fields will be populated by JS -->
           <div class="mb-4">
-              <label for="editModalTipAmount" class="block text-sm font-medium text-gray-700">Amount</label>
-              <input type="number" step="0.01" name="amount" id="editModalTipAmount" required class="w-full p-2 border border-gray-300 rounded mt-1 mb-3">
+              <label for="editModalTipAmount" class="block text-sm font-medium text-gray-700">Tips:</label> 
+              <input type="number" step="0.01" name="amount" id="editModalTipAmount" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
           </div>
           <div class="mb-4">
-              <label for="editModalTipGratuity" class="block text-sm font-medium text-gray-700">Gratuity</label>
-              <input type="number" step="0.01" name="gratuity" id="editModalTipGratuity" class="w-full p-2 border border-gray-300 rounded mt-1 mb-3">
+              <label for="editModalTipGratuity" class="block text-sm font-medium text-gray-700">Gratuity:</label> 
+              <input type="number" step="0.01" name="gratuity" id="editModalTipGratuity" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
           </div>
+
+          <!-- START: New Fields for Edit Modal -->
+          <div class="mb-4">
+              <label for="editModalCashMade" class="block text-sm font-medium text-gray-700">Cash:</label>
+              <input type="number" step="0.01" name="cash_made" id="editModalCashMade" placeholder="0.00" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+          </div>
+          <div class="mb-4">
+              <label for="editModalHoursWorked" class="block text-sm font-medium text-gray-700">Hours:</label>
+              <input type="number" step="0.25" name="hours_worked" id="editModalHoursWorked" placeholder="0.0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+          </div>
+          <!-- END: New Fields for Edit Modal -->
+
           <div class="mb-4">
               <label for="editModalTipNote" class="block text-sm font-medium text-gray-700">Note (Optional)</label>
-              <textarea name="note" id="editModalTipNote" rows="3" class="w-full p-2 border border-gray-300 rounded"></textarea>
+              <textarea name="note" id="editModalTipNote" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
           </div>
-          <!-- Add other fields if needed -->
 
           <div class="mt-6 flex justify-between items-center">
-              <a href="#" id="deleteTipLink" class="text-red-600 hover:text-red-800 text-sm">Delete Tip</a>
+              <a href="#" id="deleteTipLink" class="text-red-600 hover:text-red-800 text-sm">Delete Tip</a> {# Href set by JS #}
 
               <div>
                   <button type="button" id="cancelEditModalBtn" class="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancel</button>
@@ -232,7 +274,7 @@
 {% endblock %} {# End of content block #}
 
 
-{% block javascript %} {# Start of javascript block - MOVED HERE #}
+{% block javascript %} {# Start of javascript block #}
 {{ block.super }}
 <script>
   document.addEventListener('DOMContentLoaded', () => {
@@ -242,13 +284,20 @@
     const cancelModalBtn = document.getElementById('cancelModalBtn');
     const modalTipDateInput = document.getElementById('modalTipDate');
     const addTipForm = document.getElementById('addTipForm');
+    // Get new add form inputs (optional, only needed if you want to manipulate them directly)
+    // const modalCashMadeInput = document.getElementById('modalCashMade');
+    // const modalHoursWorkedInput = document.getElementById('modalHoursWorked');
+    // const modalTipNoteInput = document.getElementById('modalTipNote'); // Added note field
 
     // --- Function to open the Add Tip modal ---
     function openModal(date) {
       if (!modal || !modalTipDateInput || !addTipForm) return;
       modalTipDateInput.value = date;
       modal.classList.remove('hidden');
-      addTipForm.reset();
+      addTipForm.reset(); // Resets all fields including new ones
+      // Optionally set default focus
+      const amountInput = document.getElementById('modalTipAmount');
+      if (amountInput) amountInput.focus();
     }
 
     // --- Function to close the Add Tip modal ---
@@ -277,12 +326,13 @@
       addTipForm.addEventListener('submit', (event) => {
         event.preventDefault();
 
+        // FormData automatically picks up all named fields, including the new ones
         const formData = new FormData(addTipForm);
         const url = addTipForm.action;
         const csrfTokenInput = addTipForm.querySelector('input[name="csrfmiddlewaretoken"]');
 
         if (!csrfTokenInput) {
-            console.error('CSRF token input not found!'); // Keep essential error logs
+            console.error('CSRF token input not found!');
             alert('Error: Could not submit form. Security token missing.');
             return;
         }
@@ -293,7 +343,7 @@
 
         fetch(url, {
           method: 'POST',
-          body: formData,
+          body: formData, // Includes date, amount, gratuity, cash_made, hours_worked, note
           headers: {
             'X-CSRFToken': csrfToken,
             'X-Requested-With': 'XMLHttpRequest',
@@ -303,6 +353,7 @@
             if (!response.ok) {
                 if (response.status === 400) {
                     return response.json().then(data => {
+                        // Pass the errors object which might contain validation errors for new fields
                         throw { validationErrors: data.errors };
                     });
                 }
@@ -313,16 +364,17 @@
         .then(data => {
           if (data.status === 'success') {
             closeModal();
-            location.reload();
+            location.reload(); // Reload to see the updated calendar/totals
           } else {
             alert(data.message || 'An unexpected error occurred.');
-            console.error('Server indicated failure:', data); // Keep essential error logs
+            console.error('Server indicated failure:', data);
           }
         })
         .catch(error => {
-          console.error('Error submitting form:', error); // Keep essential error logs
+          console.error('Error submitting form:', error);
           if (error.validationErrors) {
             let errorMessages = "Please correct the following errors:\n";
+            // Display validation errors for all fields, including new ones
             for (const field in error.validationErrors) {
               errorMessages += `\n${field}: ${error.validationErrors[field].join(', ')}`;
             }
@@ -336,7 +388,7 @@
         });
       });
     } else {
-        console.error('Add tip form not found.'); // Keep essential error logs
+        console.error('Add tip form not found.');
     }
 
     // --- Get Edit Modal Elements ---
@@ -349,27 +401,43 @@
     const editModalTipGratuityInput = document.getElementById('editModalTipGratuity');
     const editModalTipNoteInput = document.getElementById('editModalTipNote');
     const deleteTipLink = document.getElementById('deleteTipLink');
+    // START: Get new edit form inputs
+    const editModalCashMadeInput = document.getElementById('editModalCashMade');
+    const editModalHoursWorkedInput = document.getElementById('editModalHoursWorked');
+    // END: Get new edit form inputs
 
     // --- Function to open the Edit Modal ---
     function openEditModal(tipData) {
-        if (!editModal || !editTipForm || !deleteTipLink) return;
+        // Ensure all required elements exist, including the new ones
+        if (!editModal || !editTipForm || !deleteTipLink || !editModalCashMadeInput || !editModalHoursWorkedInput) {
+            console.error("One or more edit modal elements not found!");
+            return;
+        }
 
         let datePart = tipData.date;
-        if (datePart && datePart.includes('T')) {
+        if (datePart && datePart.includes('T')) { // Handle potential datetime format from JSON
             datePart = datePart.split('T')[0];
         }
         editModalTipDateInput.value = datePart;
         editModalTipAmountInput.value = tipData.amount;
-        editModalTipGratuityInput.value = tipData.gratuity != null ? tipData.gratuity : '';
-        editModalTipNoteInput.value = tipData.note || '';
+        editModalTipGratuityInput.value = tipData.gratuity != null ? tipData.gratuity : ''; // Handle null
+        editModalTipNoteInput.value = tipData.note || ''; // Handle null/undefined
 
-        const editUrl = `/edit-tip/${tipData.id}/`;
+        // START: Populate new fields
+        // Ensure your backend view sends these fields in the JSON response!
+        editModalCashMadeInput.value = tipData.cash_made != null ? tipData.cash_made : '';
+        editModalHoursWorkedInput.value = tipData.hours_worked != null ? tipData.hours_worked : '';
+        // END: Populate new fields
+
+        const editUrl = `/edit-tip/${tipData.id}/`; // Make sure this URL pattern exists in urls.py
         editTipForm.action = editUrl;
 
-        const deleteUrl = `/delete-tip/${tipData.id}/`;
-        deleteTipLink.href = deleteUrl;
+        const deleteUrl = `/delete-tip/${tipData.id}/`; // Make sure this URL pattern exists in urls.py
+        deleteTipLink.href = deleteUrl; // Set href for the delete link
 
         editModal.classList.remove('hidden');
+        // Optionally set focus
+        if (editModalTipAmountInput) editModalTipAmountInput.focus();
     }
 
     // --- Function to close the Edit Modal ---
@@ -398,6 +466,7 @@
         editTipForm.addEventListener('submit', (event) => {
             event.preventDefault();
 
+            // FormData automatically picks up all named fields, including the new ones
             const formData = new FormData(editTipForm);
             const url = editTipForm.action;
             const csrfTokenInput = editTipForm.querySelector('input[name="csrfmiddlewaretoken"]');
@@ -414,7 +483,7 @@
 
             fetch(url, {
                 method: 'POST',
-                body: formData,
+                body: formData, // Includes date, amount, gratuity, cash_made, hours_worked, note
                 headers: {
                 'X-CSRFToken': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest',
@@ -424,6 +493,7 @@
                 if (!response.ok) {
                     if (response.status === 400) {
                         return response.json().then(data => {
+                            // Pass the errors object which might contain validation errors for new fields
                             throw { validationErrors: data.errors };
                         });
                     }
@@ -434,7 +504,7 @@
             .then(data => {
                 if (data.status === 'success') {
                 closeEditModal();
-                location.reload();
+                location.reload(); // Reload to see updated calendar/totals
                 } else {
                 alert(data.message || 'An unexpected error occurred while saving.');
                 console.error('Server indicated failure:', data);
@@ -444,6 +514,7 @@
                 console.error('Error submitting edit form:', error);
                 if (error.validationErrors) {
                 let errorMessages = "Please correct the following errors:\n";
+                 // Display validation errors for all fields, including new ones
                 for (const field in error.validationErrors) {
                     errorMessages += `\n${field}: ${error.validationErrors[field].join(', ')}`;
                 }
@@ -499,13 +570,13 @@
     // --- Handle Delete Tip Link Click (Opens Confirmation Modal) ---
     if (deleteTipLink) {
         deleteTipLink.addEventListener('click', (event) => {
-            event.preventDefault();
-            const url = deleteTipLink.href;
-            if (url) {
+            event.preventDefault(); // Prevent navigating away
+            const url = deleteTipLink.href; // Get URL set by openEditModal
+            if (url && url !== '#') { // Check if URL is valid
                 openConfirmDeleteModal(url);
             } else {
-                console.error('Could not get URL from delete link.');
-                alert('Error preparing deletion.');
+                console.error('Could not get valid URL from delete link.');
+                alert('Error preparing deletion. Please try opening the edit modal again.');
             }
         });
     } else {
@@ -516,6 +587,7 @@
     if (confirmDeleteBtn) {
         confirmDeleteBtn.addEventListener('click', () => {
             const url = confirmDeleteUrlInput.value;
+            // Get CSRF token from the *edit* form as it's likely available
             const csrfTokenInput = editTipForm.querySelector('input[name="csrfmiddlewaretoken"]');
 
             if (!url) {
@@ -536,18 +608,20 @@
             confirmDeleteBtn.textContent = 'Deleting...';
 
             fetch(url, {
-                method: 'DELETE',
+                method: 'DELETE', // Use DELETE method for deletion
                 headers: {
                     'X-CSRFToken': csrfToken,
                     'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'application/json'
+                    'Accept': 'application/json' // Expect JSON response
                 },
             })
             .then(response => {
                 if (!response.ok) {
+                    // Try to parse error message from JSON response
                     return response.json().then(errData => {
                         throw new Error(errData.message || `HTTP error! status: ${response.status}`);
                     }).catch(() => {
+                        // Fallback if response is not JSON or has no message
                         throw new Error(`HTTP error! status: ${response.status}`);
                     });
                 }
@@ -556,8 +630,8 @@
             .then(data => {
                 if (data.status === 'success') {
                     closeConfirmDeleteModal();
-                    closeEditModal();
-                    location.reload();
+                    closeEditModal(); // Close the edit modal too
+                    location.reload(); // Reload to reflect deletion
                 } else {
                     console.error('Server indicated deletion failure:', data);
                     alert(data.message || 'An unexpected error occurred while deleting.');
@@ -568,9 +642,11 @@
                 alert(`Could not delete tip: ${error.message}`);
             })
             .finally(() => {
+                 // Ensure button is re-enabled and text reset even if modal closed early
                  confirmDeleteBtn.disabled = false;
                  confirmDeleteBtn.textContent = 'Delete Tip';
-                 if (!confirmDeleteModal.classList.contains('hidden')) {
+                 // Ensure modal is closed if still open
+                 if (confirmDeleteModal && !confirmDeleteModal.classList.contains('hidden')) {
                      closeConfirmDeleteModal();
                  }
             });
@@ -587,22 +663,23 @@
             const editButton = event.target.closest('.edit-tip-button');
 
             if (addButton) {
-                event.preventDefault();
+                event.preventDefault(); // Prevent default link navigation
                 const date = addButton.dataset.date;
                 if (date) {
-                    openModal(date);
+                    openModal(date); // Open the Add Tip modal
                 } else {
                     console.error('Could not find date on add button.');
                 }
             } else if (editButton) {
-                event.preventDefault();
+                event.preventDefault(); // Prevent default link navigation
                 const tipId = editButton.dataset.tipId;
                 if (tipId) {
-                    fetch(`/edit-tip/${tipId}/`, {
-                        method: 'GET',
+                    // Fetch tip data for the edit modal
+                    fetch(`/edit-tip/${tipId}/`, { // Use the same URL pattern as the form action
+                        method: 'GET', // Use GET to fetch data
                         headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept': 'application/json'
+                            'X-Requested-With': 'XMLHttpRequest', // Indicate AJAX request
+                            'Accept': 'application/json' // Expect JSON response
                         }
                     })
                     .then(response => {
@@ -612,8 +689,9 @@
                         return response.json();
                     })
                     .then(data => {
+                        // IMPORTANT: Ensure your view returns JSON like: {'tip': {'id': ..., 'amount': ..., 'cash_made': ..., 'hours_worked': ...}}
                         if (data.tip) {
-                            openEditModal(data.tip);
+                            openEditModal(data.tip); // Open the Edit Tip modal with fetched data
                         } else {
                             console.error('Tip data not found in response:', data);
                             alert('Error: Could not load tip details.');
@@ -644,6 +722,7 @@
     function openPayCycleModal() {
         if (!payCycleModal) return;
         payCycleModal.classList.remove('hidden');
+        if (payCycleStartDateInput) payCycleStartDateInput.focus();
     }
 
     // --- Function to close the Pay Cycle Modal ---
@@ -655,7 +734,7 @@
     // --- Event Listeners for Pay Cycle Modal ---
     if (openPayCycleBtn) {
         openPayCycleBtn.addEventListener('click', (event) => {
-            event.preventDefault();
+            event.preventDefault(); // Prevent any default button action
             openPayCycleModal();
         });
     } else {
@@ -708,6 +787,7 @@
                 if (!response.ok) {
                     if (response.status === 400) {
                         return response.json().then(data => {
+                            // Handle potential validation errors from the backend
                             throw { validationErrors: data.errors || {'_error': ['Validation failed. Please check the fields.']} };
                         });
                     }
@@ -718,7 +798,7 @@
             .then(data => {
                 if (data.status === 'success') {
                     closePayCycleModal();
-                    location.reload();
+                    location.reload(); // Reload to update paycheck estimate
                 } else {
                     alert(data.message || 'An unexpected error occurred.');
                     console.error('Server indicated failure:', data);
@@ -729,7 +809,7 @@
                 if (error.validationErrors) {
                     let errorMessages = "Please correct the following errors:\n";
                     for (const field in error.validationErrors) {
-                        const prefix = field === '_error' ? '' : `${field}: `;
+                        const prefix = field === '_error' ? '' : `${field}: `; // Handle non-field errors
                         errorMessages += `\n${prefix}${error.validationErrors[field].join(', ')}`;
                     }
                     alert(errorMessages);
@@ -746,8 +826,24 @@
     }
     // --- END OF PAY CYCLE MODAL JS ---
 
+    // Close modals on Escape key press
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            if (modal && !modal.classList.contains('hidden')) {
+                closeModal();
+            }
+            if (editModal && !editModal.classList.contains('hidden')) {
+                closeEditModal();
+            }
+            if (confirmDeleteModal && !confirmDeleteModal.classList.contains('hidden')) {
+                closeConfirmDeleteModal();
+            }
+            if (payCycleModal && !payCycleModal.classList.contains('hidden')) {
+                closePayCycleModal();
+            }
+        }
+    });
+
   });
 </script>
-{% endblock %} 
-
-
+{% endblock %}

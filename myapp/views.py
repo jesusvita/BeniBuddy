@@ -4,13 +4,14 @@ from .models import Tip, PaycheckCycle
 from django.contrib.auth.decorators import login_required
 import calendar
 from datetime import date, timedelta, datetime
-from django.db.models import Sum
+from django.db.models import Sum, DecimalField
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse, HttpResponseForbidden, Http404
 from django.forms.models import model_to_dict
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.db import models
+import decimal
 
 def home(request):
     if request.user.is_authenticated:
@@ -110,11 +111,15 @@ def user_tips(request, year=None, month=None):
 
     # Calculate totals for the displayed month - CORRECTED AGGREGATION
     monthly_aggregation = monthly_tips.aggregate(
-        total_tip=Coalesce(Sum('amount'), 0.0, output_field=models.DecimalField()),
-        total_gratuity=Coalesce(Sum('gratuity'), 0.0, output_field=models.DecimalField())
+        total_tip=Coalesce(Sum('amount'), decimal.Decimal('0.00'), output_field=DecimalField()),
+        total_gratuity=Coalesce(Sum('gratuity'), decimal.Decimal('0.00'), output_field=DecimalField()),
+        total_cash=Coalesce(Sum('cash_made'), decimal.Decimal('0.00'), output_field=DecimalField()), # Add cash
+        total_hours=Coalesce(Sum('hours_worked'), decimal.Decimal('0.00'), output_field=DecimalField()) # Add hours
     )
     total_monthly_tip = monthly_aggregation['total_tip']
     total_monthly_gratuity = monthly_aggregation['total_gratuity']
+    total_monthly_cash = monthly_aggregation['total_cash'] 
+    total_monthly_hours = monthly_aggregation['total_hours']
 
     # Create a dictionary for quick lookup in calendar generation
     tip_dict = {tip.date.date(): tip for tip in monthly_tips}
@@ -145,46 +150,37 @@ def user_tips(request, year=None, month=None):
     paycheck_day_display = None    # The end date to display in the template
     recent_total_tip = 0.0
     recent_total_gratuity = 0.0
+    recent_total_cash = decimal.Decimal('0.00') # Add cash
+    recent_total_hours = decimal.Decimal('0.00') # Add hours
     paycheck_total = 0.0
 
     if paycheck_cycle.start_date and paycheck_cycle.frequency:
         paycheck_anchor_date = paycheck_cycle.start_date
-
-        # Determine cycle length based on frequency
-        if paycheck_cycle.frequency == PaycheckCycle.PayFrequency.WEEKLY:
-            cycle_length = 7
-        elif paycheck_cycle.frequency == PaycheckCycle.PayFrequency.BIWEEKLY:
-            cycle_length = 14
-        else:
-            cycle_length = 0
+        cycle_length = 14 if paycheck_cycle.frequency == PaycheckCycle.PayFrequency.BIWEEKLY else (7 if paycheck_cycle.frequency == PaycheckCycle.PayFrequency.WEEKLY else 0)
 
         if cycle_length > 0:
-            # --- MODIFIED LOGIC ---
-            # The start date IS the anchor date
             target_cycle_start_date = paycheck_anchor_date
-            # The end date is calculated directly from the anchor date
             target_cycle_end_date = target_cycle_start_date + timedelta(days=cycle_length - 1)
-            # The date to display is the end date of this specific cycle
-            paycheck_day_display = target_cycle_end_date + timedelta(days=5)
-            # --- END OF MODIFIED LOGIC ---
+            paycheck_day_display = target_cycle_end_date + timedelta(days=5) # Assuming 5 days after cycle end
 
-            # Filter tips within the target cycle range
             recent_tips = Tip.objects.filter(
                 user=request.user,
                 date__date__range=[target_cycle_start_date, target_cycle_end_date]
             )
 
-            # Aggregate tips for the target cycle
+            # --- Updated Aggregation for paycheck cycle ---
             cycle_aggregation = recent_tips.aggregate(
-                total_tip=Coalesce(Sum('amount'), 0.0, output_field=models.DecimalField()),
-                total_gratuity=Coalesce(Sum('gratuity'), 0.0, output_field=models.DecimalField())
+                total_tip=Coalesce(Sum('amount'), decimal.Decimal('0.00'), output_field=DecimalField()),
+                total_gratuity=Coalesce(Sum('gratuity'), decimal.Decimal('0.00'), output_field=DecimalField()),
+                total_cash=Coalesce(Sum('cash_made'), decimal.Decimal('0.00'), output_field=DecimalField()), # Add cash
+                total_hours=Coalesce(Sum('hours_worked'), decimal.Decimal('0.00'), output_field=DecimalField()) # Add hours
             )
             recent_total_tip = cycle_aggregation['total_tip']
             recent_total_gratuity = cycle_aggregation['total_gratuity']
+            recent_total_cash = cycle_aggregation['total_cash']
+            recent_total_hours = cycle_aggregation['total_hours']
             paycheck_total = recent_total_tip + recent_total_gratuity
-            # No 'else' needed here as we aren't checking against today_date anymore
 
-    # else: # Cycle not set or frequency invalid - totals remain 0
 
 
     # --- Context ---
@@ -205,6 +201,10 @@ def user_tips(request, year=None, month=None):
         "paycheck_total": paycheck_total,
         "paycheck_day": paycheck_day_display, # Use the new variable name for clarity
         "paycheck_cycle": paycheck_cycle,
+        "total_monthly_cash": total_monthly_cash,
+        "recent_total_hours": recent_total_hours,
+        
+        
     }
     return render(request, "myapp/user_tips.html", context)
 
@@ -267,63 +267,73 @@ def add_tip(request):
              return render(request, 'myapp/add_tip_form.html', {'form': form})
 
 @login_required
-@require_http_methods(["GET", "POST"]) # Edit uses GET (fetch data/show form) and POST (submit changes)
+@require_http_methods(["GET", "POST"])
 def edit_tip(request, tip_id):
-    tip = get_object_or_404(Tip, id=tip_id) # Get the tip first
+    tip = get_object_or_404(Tip, id=tip_id)
     is_ajax = request.headers.get('x-requested-with') == 'XMLHttpRequest'
 
-    # --- Permission Check ---
     if tip.user != request.user:
         if is_ajax:
             return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
         else:
-            # Render a forbidden page or redirect
             return HttpResponseForbidden("You don't have permission to edit this tip.")
 
-    # --- Handle POST (Save Changes) ---
     if request.method == "POST":
+        # TipForm now includes cash_made and hours_worked
         form = TipForm(request.POST, instance=tip)
         if form.is_valid():
-            # Handle date conversion if needed (similar to add_tip)
+            # Handle date conversion if needed
             cleaned_date = form.cleaned_data['date']
             if isinstance(cleaned_date, date) and not isinstance(cleaned_date, datetime):
                  tip.date = datetime.combine(cleaned_date, datetime.min.time())
+                 # If using timezones:
+                 # tip.date = timezone.make_aware(datetime.combine(cleaned_date, datetime.min.time()))
             # No else needed if form field correctly provides datetime
 
-            form.save() # Saves changes to the existing tip instance
+            # cash_made and hours_worked are updated automatically by form.save()
+            form.save()
 
             if is_ajax:
                 return JsonResponse({'status': 'success', 'message': 'Tip updated successfully!'})
             else:
-                # Redirect back to the month the tip is in
                 return redirect('user_tips', year=tip.date.year, month=tip.date.month)
-        else: # Form is invalid
+        else:
             if is_ajax:
+                # form.errors will include errors for new fields if validation fails
                 return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
             else:
-                # Re-render the edit form page with errors
-                return render(request, 'myapp/edit_tip.html', {'form': form, 'tip': tip})
+                # Non-AJAX fallback (render form page with errors)
+                # Ensure you have an 'edit_tip.html' template or adjust
+                return render(request, 'myapp/tip_form.html', {'form': form, 'tip': tip}) # Assuming generic form template
 
-    # --- Handle GET (Fetch Data or Show Form) ---
+    # --- Handle GET (Fetch Data for Modal or Show Form) ---
     elif request.method == "GET":
         if is_ajax:
-            # Return tip data as JSON for modal population
-            tip_data = model_to_dict(tip, fields=['id', 'amount', 'gratuity', 'date', 'note'])
-            tip_data['amount'] = str(tip_data['amount'])
-            tip_data['gratuity'] = str(tip_data['gratuity']) if tip_data['gratuity'] is not None else '0.00' # Handle potential None for gratuity
+            # *** MODIFIED: Include cash_made and hours_worked in JSON ***
+            tip_data = model_to_dict(tip, fields=[
+                'id', 'amount', 'gratuity', 'date', 'note',
+                'cash_made', 'hours_worked' # Add the new fields here
+            ])
 
-            # Format date consistently (send ISO format for JS Date object or YYYY-MM-DD)
-            # Sending ISO format is generally safer for JS Date parsing
+            # Convert Decimals to strings for JSON compatibility
+            tip_data['amount'] = str(tip_data['amount'])
+            tip_data['gratuity'] = str(tip_data['gratuity']) if tip_data['gratuity'] is not None else '0.00'
+            tip_data['cash_made'] = str(tip_data['cash_made']) if tip_data['cash_made'] is not None else '0.00'
+            tip_data['hours_worked'] = str(tip_data['hours_worked']) if tip_data['hours_worked'] is not None else '0.00'
+
+            # Format date consistently (ISO format is good for JS)
             if isinstance(tip_data['date'], datetime):
-                 tip_data['date'] = tip_data['date'].isoformat() # e.g., "2023-10-27T10:00:00"
+                 tip_data['date'] = tip_data['date'].isoformat()
             elif isinstance(tip_data['date'], date):
-                 tip_data['date'] = tip_data['date'].isoformat() # e.g., "2023-10-27"
+                 tip_data['date'] = tip_data['date'].isoformat()
 
             return JsonResponse({'tip': tip_data})
         else:
-            # Render the full edit form page
+            # Render the full edit form page for non-AJAX access
             form = TipForm(instance=tip)
-            return render(request, 'myapp/edit_tip.html', {'form': form, 'tip': tip})
+            # Ensure you have an 'edit_tip.html' template or adjust
+            return render(request, 'myapp/tip_form.html', {'form': form, 'tip': tip}) # Assuming generic form template
+
 
 
 # --- UPDATED delete_tip view ---

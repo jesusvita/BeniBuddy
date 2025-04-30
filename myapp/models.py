@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _ # For choices
 from datetime import date, timedelta, datetime
+import decimal
 
 class Tip(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -10,6 +11,20 @@ class Tip(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     date = models.DateTimeField()  # Manually entered date (when the tip was earned)
     note = models.TextField(blank=True, null=True)
+
+    cash_made = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=decimal.Decimal('0.00'), # Or null=True, blank=True if optional
+        verbose_name="Cash Made ($)"
+    )
+
+    hours_worked = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=decimal.Decimal('0.00'), # Or null=True, blank=True if optional
+        verbose_name="Hours Worked"
+    )
 
     def __str__(self):
         return f"{self.user.username} - ${self.amount} on {self.date.strftime('%Y-%m-%d')}"

@@ -121,6 +121,9 @@
 
         <!-- Drawer Content -->
         <nav>
+          <a href="https://jesusvita.pythonanywhere.com" target="_blank" rel="noopener noreferrer" class="drawer-item">
+            Tip Calculator
+          </a>
           <!-- Logout Form/Button -->
           <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
@@ -129,9 +132,7 @@
             </button>
           </form>
           <!-- Add other menu items here as needed -->
-          <a href="https://jesusvita.pythonanywhere.com" target="_blank" rel="noopener noreferrer" class="drawer-item">
-            Tip Calculator
-          </a>
+          
           <!-- <a href="#" class="drawer-item">Settings</a> -->
         </nav>
       </div>

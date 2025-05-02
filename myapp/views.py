@@ -16,7 +16,7 @@ import decimal
 def home(request):
     if request.user.is_authenticated:
         return redirect('user_tips')  # If logged in, go to tips page
-    return render(request, 'registration/login.html')  # Show login screen
+    return redirect('login')  # Show login screen
 
 def signup(request):
     if request.method == 'POST':
@@ -26,7 +26,7 @@ def signup(request):
             return redirect('login')  # Redirect to login page after successful registration
     else:
         form = SignUpForm()
-
+    
     return render(request, 'registration/signup.html', {'form': form})
 
 @login_required

@@ -136,27 +136,27 @@
           <!-- TipForm fields -->
           <div class="mb-4">
               <label for="modalTipAmount" class="block text-sm font-medium text-gray-700">Tips:</label>
-              <input type="number" step="0.01" name="amount" id="modalTipAmount" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+              <input type="number" step="0.01" name="amount" id="modalTipAmount" required placeholder="0.00" class="mt-1 block w-full px-3 py-2 bg-white rounded-lg border-2 border-gray-400 text-gray-900 shadow-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 placeholder-gray-500">
           </div>
           <div class="mb-4">
               <label for="modalTipGratuity" class="block text-sm font-medium text-gray-700">Gratuity:</label>
-              <input type="number" step="0.01" name="gratuity" id="modalTipGratuity" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+              <input type="number" step="0.01" name="gratuity" id="modalTipGratuity" placeholder="0.00" class="mt-1 block w-full px-3 py-2 bg-white rounded-lg border-2 border-gray-400 text-gray-900 shadow-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 placeholder-gray-500">
           </div>
 
           <!-- START: New Fields for Add Modal -->
           <div class="mb-4">
               <label for="modalCashMade" class="block text-sm font-medium text-gray-700">Cash:</label>
-              <input type="number" step="0.01" name="cash_made" id="modalCashMade" placeholder="0.00" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+              <input type="number" step="0.01" name="cash_made" id="modalCashMade" placeholder="0.00" class="mt-1 block w-full px-3 py-2 bg-white rounded-lg border-2 border-gray-400 text-gray-900 shadow-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 placeholder-gray-500">
           </div>
           <div class="mb-4">
               <label for="modalHoursWorked" class="block text-sm font-medium text-gray-700">Hours Worked:</label>
-              <input type="number" step="0.25" name="hours_worked" id="modalHoursWorked" placeholder="0.0" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+              <input type="number" step="0.25" name="hours_worked" id="modalHoursWorked" placeholder="0.0" class="mt-1 block w-full px-3 py-2 bg-white rounded-lg border-2 border-gray-400 text-gray-900 shadow-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 placeholder-gray-500">
           </div>
           <!-- END: New Fields for Add Modal -->
 
           <div class="mb-4"> {# Added Note field to Add Modal for consistency #}
               <label for="modalTipNote" class="block text-sm font-medium text-gray-700">Note (Optional)</label>
-              <textarea name="note" id="modalTipNote" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"></textarea>
+              <textarea name="note" id="modalTipNote" rows="3" class="mt-1 block w-full px-3 py-2 bg-white rounded-lg border-2 border-gray-400 text-gray-900 shadow-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 placeholder-gray-500"></textarea>
           </div>
 
           <div class="mt-6 flex justify-end">
@@ -170,10 +170,10 @@
 <!-- Edit Tip Modal -->
 <div id="editTipModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
   <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
-      <div class="flex justify-between items-center mb-4">
-          <h3 class="text-xl font-semibold">Edit Tip</h3>
-          <button id="closeEditModalBtn" type="button" class="text-gray-500 hover:text-gray-800">&times;</button>
-      </div>
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-semibold">Edit Tip</h3>
+        <button id="closeEditModalBtn" type="button" class="text-2xl font-bold text-red-600 hover:text-red-800 p-1 leading-none transform hover:scale-110 transition-transform">&times;</button>
+    </div>
 
       <form id="editTipForm" method="POST"> {# Action URL set by JS #}
           {% csrf_token %}
@@ -208,16 +208,60 @@
           <div class="mt-6 flex justify-between items-center">
               <a href="#" id="deleteTipLink" class="text-red-600 hover:text-red-800 text-sm">Delete Tip</a> {# Href set by JS #}
 
-              <div>
-                  <button type="button" id="cancelEditModalBtn" class="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancel</button>
-                  <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-800 hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700">Save Changes</button>
-              </div>
+            <div>
+                <button type="button" id="openNewShiftModalBtn" class="mr-2 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">New Shift</button>
+                <button type="submit" id="saveChangesEditBtn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-800 hover:bg-red-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700">Save Changes</button>
+            </div>
           </div>
       </form>
   </div>
 </div>
 
 <!-- Edit Pay Cycle Modal -->
+<!-- START: Add New Shift Modal -->
+<div id="addNewShiftModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden z-60"> 
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-semibold">New Shift</h3>
+            <button id="closeAddNewShiftModalBtn" type="button" class="text-2xl font-bold text-red-600 hover:text-red-800 p-1 leading-none transform hover:scale-110 transition-transform">&times;</button>
+        </div>
+  
+        <form id="addNewShiftForm"> 
+            {% csrf_token %} 
+            
+            <p class="text-sm text-gray-600 mb-3">Enter the amounts for the additional shift. These will be added to the tips in your first shift.</p>
+  
+            <div class="mb-4">
+                <label for="newShiftAmount" class="block text-sm font-medium text-gray-700">Tips:</label>
+                <input type="number" step="0.01" name="amount" id="newShiftAmount" placeholder="0.00" class="mt-1 block w-full px-3 py-2 bg-white rounded-lg border-2 border-gray-400 text-gray-900 shadow-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 placeholder-gray-500">
+            </div>
+            <div class="mb-4">
+                <label for="newShiftGratuity" class="block text-sm font-medium text-gray-700">Gratuity:</label>
+                <input type="number" step="0.01" name="gratuity" id="newShiftGratuity" placeholder="0.00" class="mt-1 block w-full px-3 py-2 bg-white rounded-lg border-2 border-gray-400 text-gray-900 shadow-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 placeholder-gray-500">
+            </div>
+            <div class="mb-4">
+                <label for="newShiftCashMade" class="block text-sm font-medium text-gray-700">Cash:</label>
+                <input type="number" step="0.01" name="cash_made" id="newShiftCashMade" placeholder="0.00" class="mt-1 block w-full px-3 py-2 bg-white rounded-lg border-2 border-gray-400 text-gray-900 shadow-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 placeholder-gray-500">
+            </div>
+            <div class="mb-4">
+                <label for="newShiftHoursWorked" class="block text-sm font-medium text-gray-700">Hours:</label>
+                <input type="number" step="0.25" name="hours_worked" id="newShiftHoursWorked" placeholder="0.0" class="mt-1 block w-full px-3 py-2 bg-white rounded-lg border-2 border-gray-400 text-gray-900 shadow-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 placeholder-gray-500">
+            </div>
+            <div class="mb-4">
+                <label for="newShiftNote" class="block text-sm font-medium text-gray-700">Note for this shift (Optional)</label>
+                <textarea name="note" id="newShiftNote" rows="2" class="mt-1 block w-full px-3 py-2 bg-white rounded-lg border-2 border-gray-400 text-gray-900 shadow-sm focus:outline-none focus:border-red-600 focus:ring-1 focus:ring-red-600 placeholder-gray-500"></textarea>
+            </div>
+  
+            <div class="mt-6 flex justify-end">
+                <button type="button" id="cancelAddNewShiftBtn" class="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">Cancel</button>
+                <button type="submit" id="saveNewShiftBtn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Add to Original Tip</button>
+            </div>
+        </form>
+    </div>
+  </div>
+  <!-- END: Add New Shift Modal -->
+    
+  
 <div id="editPayCycleModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
   <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
       <div class="flex justify-between items-center mb-4">
@@ -393,8 +437,8 @@
 
     // --- Get Edit Modal Elements ---
     const editModal = document.getElementById('editTipModal');
-    const closeEditModalBtn = document.getElementById('closeEditModalBtn');
-    const cancelEditModalBtn = document.getElementById('cancelEditModalBtn');
+    const closeEditModalBtn = document.getElementById('closeEditModalBtn'); 
+    const openNewShiftModalBtn = document.getElementById('openNewShiftModalBtn');
     const editTipForm = document.getElementById('editTipForm');
     const editModalTipDateInput = document.getElementById('editModalTipDate');
     const editModalTipAmountInput = document.getElementById('editModalTipAmount');
@@ -406,6 +450,18 @@
     const editModalHoursWorkedInput = document.getElementById('editModalHoursWorked');
     // END: Get new edit form inputs
 
+    // --- Get Add New Shift Modal Elements ---
+    const addNewShiftModal = document.getElementById('addNewShiftModal');
+    const closeAddNewShiftModalBtn = document.getElementById('closeAddNewShiftModalBtn');
+    const cancelAddNewShiftBtn = document.getElementById('cancelAddNewShiftBtn');
+    const addNewShiftForm = document.getElementById('addNewShiftForm');
+    const newShiftAmountInput = document.getElementById('newShiftAmount');
+    const newShiftGratuityInput = document.getElementById('newShiftGratuity');
+    const newShiftCashMadeInput = document.getElementById('newShiftCashMade');
+    const newShiftHoursWorkedInput = document.getElementById('newShiftHoursWorked');
+    const newShiftNoteInput = document.getElementById('newShiftNote');
+    const saveNewShiftBtn = document.getElementById('saveNewShiftBtn');
+    let originalEditTipData = null;
     // --- Function to open the Edit Modal ---
     function openEditModal(tipData) {
         // Ensure all required elements exist, including the new ones
@@ -414,19 +470,21 @@
             return;
         }
 
+        originalEditTipData = JSON.parse(JSON.stringify(tipData))
+
         let datePart = tipData.date;
         if (datePart && datePart.includes('T')) { // Handle potential datetime format from JSON
             datePart = datePart.split('T')[0];
         }
         editModalTipDateInput.value = datePart;
         editModalTipAmountInput.value = tipData.amount;
-        editModalTipGratuityInput.value = tipData.gratuity != null ? tipData.gratuity : ''; // Handle null
-        editModalTipNoteInput.value = tipData.note || ''; // Handle null/undefined
+        editModalTipGratuityInput.value = tipData.gratuity != null ? tipData.gratuity : ''; 
 
         // START: Populate new fields
         // Ensure your backend view sends these fields in the JSON response!
         editModalCashMadeInput.value = tipData.cash_made != null ? tipData.cash_made : '';
         editModalHoursWorkedInput.value = tipData.hours_worked != null ? tipData.hours_worked : '';
+        editModalTipNoteInput.value = tipData.note || ''; // Handle null/undefined - moved here for consistency
         // END: Populate new fields
 
         const editUrl = `/edit-tip/${tipData.id}/`; // Make sure this URL pattern exists in urls.py
@@ -443,6 +501,7 @@
     // --- Function to close the Edit Modal ---
     function closeEditModal() {
         if (!editModal) return;
+        originalEditTipData = null;
         editModal.classList.add('hidden');
     }
 
@@ -450,9 +509,7 @@
     if (closeEditModalBtn) {
         closeEditModalBtn.addEventListener('click', closeEditModal);
     }
-    if (cancelEditModalBtn) {
-        cancelEditModalBtn.addEventListener('click', closeEditModal);
-    }
+    // Note: The old cancelEditModalBtn listener is implicitly removed as the button ID changed or the button itself was repurposed.
     if (editModal) {
         editModal.addEventListener('click', (event) => {
         if (event.target === editModal) {
@@ -461,12 +518,13 @@
         });
     }
 
-    // --- Handle Edit Form Submission via AJAX ---
+    // --- Handle "Save Changes" Form Submission via AJAX ---
     if (editTipForm) {
         editTipForm.addEventListener('submit', (event) => {
             event.preventDefault();
 
-            // FormData automatically picks up all named fields, including the new ones
+            
+            // This is for the "Save Changes" button (id="saveChangesEditBtn", type="submit")
             const formData = new FormData(editTipForm);
             const url = editTipForm.action;
             const csrfTokenInput = editTipForm.querySelector('input[name="csrfmiddlewaretoken"]');
@@ -478,7 +536,7 @@
             }
             const csrfToken = csrfTokenInput.value;
 
-            const submitButton = editTipForm.querySelector('button[type="submit"]');
+            const submitButton = document.getElementById('saveChangesEditBtn');
             if (submitButton) submitButton.disabled = true;
 
             fetch(url, {
@@ -529,6 +587,141 @@
         });
     } else {
         console.error('Edit tip form not found.');
+    }
+
+    // --- Function to open the Add New Shift Modal ---
+    function openAddNewShiftModal() {
+        if (!addNewShiftModal || !editModal) return;
+        addNewShiftForm.reset(); // Clear previous entries
+        editModal.classList.add('hidden'); // Hide the edit modal
+        addNewShiftModal.classList.remove('hidden');
+        if(newShiftAmountInput) newShiftAmountInput.focus();
+    }
+
+    // --- Function to close the Add New Shift Modal ---
+    function closeAddNewShiftModal() {
+        if (!addNewShiftModal || !editModal) return;
+        addNewShiftModal.classList.add('hidden');
+        if (originalEditTipData) { // Only re-show edit modal if it was meant to be open
+            editModal.classList.remove('hidden'); 
+        }
+    }
+
+    // --- Event listener for "New Shift" button in Edit Modal ---
+    if (openNewShiftModalBtn) {
+        openNewShiftModalBtn.addEventListener('click', () => {
+            if (!originalEditTipData) {
+                alert('Error: Original tip data not found. Please reopen the edit window.');
+                console.error('originalEditTipData is null when trying to open new shift modal.');
+                return;
+            }
+            openAddNewShiftModal();
+        });
+    }
+
+    // --- Event listeners for closing the Add New Shift Modal ---
+    if (closeAddNewShiftModalBtn) {
+        closeAddNewShiftModalBtn.addEventListener('click', closeAddNewShiftModal);
+    }
+    if (cancelAddNewShiftBtn) {
+        cancelAddNewShiftBtn.addEventListener('click', closeAddNewShiftModal);
+    }
+    if (addNewShiftModal) {
+        addNewShiftModal.addEventListener('click', (event) => {
+            if (event.target === addNewShiftModal) {
+                closeAddNewShiftModal();
+            }
+        });
+    }
+
+    // --- Handle "Add New Shift" Form Submission ---
+    if (addNewShiftForm) {
+        addNewShiftForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+
+            if (!originalEditTipData) {
+                alert('Error: Original tip data is missing. Cannot save new shift.');
+                closeAddNewShiftModal(); // Close this modal
+                // editModal might still be hidden, or user might be confused.
+                // Consider if editModal should be re-shown or if an error forces a full modal close.
+                return;
+            }
+            
+            const csrfTokenInput = editTipForm.querySelector('input[name="csrfmiddlewaretoken"]'); // Get token from main edit form
+            if (!csrfTokenInput) {
+                console.error('CSRF token input not found in edit form for Add New Shift!');
+                alert('Error: Could not submit form. Security token missing.');
+                return;
+            }
+            const csrfToken = csrfTokenInput.value;
+            const url = editTipForm.action; // Use the same URL as edit
+
+            const additionalAmount = parseFloat(newShiftAmountInput.value) || 0;
+            const additionalGratuity = parseFloat(newShiftGratuityInput.value) || 0;
+            const additionalCash = parseFloat(newShiftCashMadeInput.value) || 0;
+            const additionalHours = parseFloat(newShiftHoursWorkedInput.value) || 0;
+            const additionalNote = newShiftNoteInput.value.trim();
+            
+            const totalAmount = (parseFloat(originalEditTipData.amount) || 0) + additionalAmount;
+            const totalGratuity = (parseFloat(originalEditTipData.gratuity) || 0) + additionalGratuity;
+            const totalCash = (parseFloat(originalEditTipData.cash_made) || 0) + additionalCash;
+            const totalHours = (parseFloat(originalEditTipData.hours_worked) || 0) + additionalHours;
+
+            let combinedNote = originalEditTipData.note || "";
+            if (additionalNote) {
+                if (combinedNote) {
+                    combinedNote += "\n--- Second Shift ---\n" + additionalNote;
+                } else {
+                    combinedNote = "--- Second Shift ---\n" + additionalNote;
+                }
+            }
+            const date = originalEditTipData.date.split('T')[0]; 
+
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', csrfToken); // Add CSRF token to FormData
+            formData.append('date', date);
+            formData.append('amount', totalAmount.toFixed(2));
+            formData.append('gratuity', totalGratuity.toFixed(2));
+            formData.append('cash_made', totalCash.toFixed(2));
+            formData.append('hours_worked', totalHours.toFixed(2));
+            formData.append('note', combinedNote);
+
+            if(saveNewShiftBtn) saveNewShiftBtn.disabled = true;
+
+            fetch(url, {
+                method: 'POST',
+                body: formData, // CSRF token is now part of formData
+                headers: {
+                    // 'X-CSRFToken': csrfToken, // No longer needed here if in FormData
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 400) {
+                        return response.json().then(data => { throw { validationErrors: data.errors }; });
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    addNewShiftModal.classList.add('hidden'); // Close new shift modal
+                    closeEditModal(); // This closes edit modal and clears originalEditTipData
+                    location.reload();
+                } else {
+                    alert(data.message || 'An unexpected error occurred while saving new shift data.');
+                }
+            })
+            .catch(error => {
+                console.error('Error submitting new shift data:', error);
+                alert(error.validationErrors ? `Please correct errors: ${JSON.stringify(error.validationErrors)}` : 'Could not save new shift data. Please try again.');
+            })
+            .finally(() => {
+                if(saveNewShiftBtn) saveNewShiftBtn.disabled = false;
+            });
+        });
     }
 
     // --- Get Confirm Delete Modal Elements ---
@@ -840,6 +1033,9 @@
             }
             if (payCycleModal && !payCycleModal.classList.contains('hidden')) {
                 closePayCycleModal();
+            }
+            if (addNewShiftModal && !addNewShiftModal.classList.contains('hidden')) {
+                closeAddNewShiftModal(); 
             }
         }
     });

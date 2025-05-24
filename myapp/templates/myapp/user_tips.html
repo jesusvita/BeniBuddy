@@ -119,6 +119,16 @@
     <p class="font-sans font-[770] text-purple-800 text-lg">Hours: {{ recent_total_hours|floatformat:2 }}</p>
     <p class="font-sans font-[770] text-black text-xl mt-2 font-semibold">Total: ${{ paycheck_total|floatformat:2 }}</p>
   </div>
+
+  <!-- PayPal Donate Button -->
+  <div class="mt-8 mb-4 text-center">
+    <a href="https://www.paypal.com/donate/?business=S7CHTATAM6CHY&no_recurring=0&currency_code=USD" 
+       target="_blank" 
+       rel="noopener noreferrer"
+       class="inline-block bg-[#880808] hover:bg-red-800 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors duration-150 ease-in-out">
+      Support BeniBuddy
+    </a>
+  </div>
 </div>
 
 <!-- Add Tip Modal -->
@@ -369,6 +379,28 @@
     if (addTipForm) {
       addTipForm.addEventListener('submit', (event) => {
         event.preventDefault();
+
+        // --- START: Default empty numeric inputs to 0 ---
+        const amountInput = document.getElementById('modalTipAmount');
+        const gratuityInput = document.getElementById('modalTipGratuity');
+        const cashMadeInput = document.getElementById('modalCashMade');
+        const hoursWorkedInput = document.getElementById('modalHoursWorked');
+
+        // Amount is required, but this handles if it's somehow submitted empty
+        if (amountInput && amountInput.value.trim() === '') {
+            amountInput.value = '0';
+        }
+        // Gratuity, Cash, and Hours are often optional, so default them if empty
+        if (gratuityInput && gratuityInput.value.trim() === '') {
+            gratuityInput.value = '0';
+        }
+        if (cashMadeInput && cashMadeInput.value.trim() === '') {
+            cashMadeInput.value = '0';
+        }
+        if (hoursWorkedInput && hoursWorkedInput.value.trim() === '') {
+            hoursWorkedInput.value = '0';
+        }
+        // --- END: Default empty numeric inputs to 0 ---
 
         // FormData automatically picks up all named fields, including the new ones
         const formData = new FormData(addTipForm);

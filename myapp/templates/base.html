@@ -32,37 +32,7 @@
 
     <!-- Your custom styles -->
     <link rel="stylesheet" href="{% static 'myapp/css/styles.css' %}">
-    <style>
-      .week-divider:not(:last-child)::after {
-        content: '';
-        display: block;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        margin-top: 0.5rem;
-      }
-      /* Style for drawer menu items */
-      .drawer-item {
-        display: block;
-        width: 100%;
-        text-align: left;
-        padding: 0.75rem 1.5rem; /* Adjust padding */
-        color: #fdfdfd; /* paleWhite */
-        transition: background-color 0.15s ease-in-out;
-        border-radius: 0.375rem; /* rounded-md */
-        margin-bottom: 0.25rem; /* Add some space between items */
-      }
-      .drawer-item:hover {
-        background-color: #B91C1C; /* primary */
-      }
-      .drawer-item button {
-         width: 100%;
-         text-align: left;
-         background: none;
-         border: none;
-         padding: 0;
-         cursor: pointer;
-         color: inherit;
-      }
-    </style>
+    <!-- Consider moving .week-divider to styles.css if it's not globally essential or used frequently -->
     <!-- Google Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -121,13 +91,19 @@
 
         <!-- Drawer Content -->
         <nav>
-          <a href="https://jesusvita.pythonanywhere.com" target="_blank" rel="noopener noreferrer" class="drawer-item">
+          <a href="https://jesusvita.pythonanywhere.com" target="_blank" rel="noopener noreferrer" 
+             class="block w-full text-left py-3 px-6 text-paleWhite transition-colors duration-150 ease-in-out rounded-md mb-1 hover:bg-primary">
             Tip Calculator
+          </a>
+          <a href="https://www.paypal.com/donate/?business=S7CHTATAM6CHY&no_recurring=0&currency_code=USD" target="_blank" rel="noopener noreferrer"
+             class="block w-full text-left py-3 px-6 text-paleWhite transition-colors duration-150 ease-in-out rounded-md mb-1 hover:bg-primary">
+            Support BeniBuddy
           </a>
           <!-- Logout Form/Button -->
           <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
-            <button type="submit" class="drawer-item">
+            <button type="submit" 
+                    class="block w-full text-left py-3 px-6 text-paleWhite transition-colors duration-150 ease-in-out rounded-md mb-1 hover:bg-primary">
               Logout
             </button>
           </form>
@@ -148,25 +124,31 @@
         const sideDrawer = document.getElementById('side-drawer');
         const menuOverlay = document.getElementById('menu-overlay');
         const closeDrawerButton = document.getElementById('close-drawer-button');
+        let focusedElementBeforeDrawer;
 
         function openDrawer() {
           // Ensure elements exist (especially if user is not authenticated)
           if (!sideDrawer || !menuOverlay) return;
+          focusedElementBeforeDrawer = document.activeElement; // Store focus
+
           menuOverlay.classList.remove('opacity-0', 'pointer-events-none');
           menuOverlay.classList.add('opacity-100', 'pointer-events-auto');
           sideDrawer.classList.remove('translate-x-full');
           sideDrawer.classList.add('translate-x-0');
           if (hamburgerButton) hamburgerButton.setAttribute('aria-expanded', 'true');
+          if (closeDrawerButton) closeDrawerButton.focus(); // Set focus to close button
         }
 
         function closeDrawer() {
           // Ensure elements exist
           if (!sideDrawer || !menuOverlay) return;
+
           menuOverlay.classList.add('opacity-0', 'pointer-events-none');
           menuOverlay.classList.remove('opacity-100', 'pointer-events-auto');
           sideDrawer.classList.add('translate-x-full');
           sideDrawer.classList.remove('translate-x-0');
           if (hamburgerButton) hamburgerButton.setAttribute('aria-expanded', 'false');
+          if (focusedElementBeforeDrawer) focusedElementBeforeDrawer.focus(); // Restore focus
         }
 
         // Add listeners only if the elements exist (i.e., user is authenticated)

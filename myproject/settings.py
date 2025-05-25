@@ -166,6 +166,16 @@ LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/your-tips/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
+# --- Session Settings for Persistent Login ("Remember Me") ---
+# Determines if the session cookie should expire when the browser closes.
+# Setting this to False allows SESSION_COOKIE_AGE to take effect,
+# making sessions persist across browser closures. This is the default value.
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# How long the session cookie will last, in seconds, if SESSION_EXPIRE_AT_BROWSER_CLOSE is False.
+# Default is 1209600 (2 weeks).
+# You can adjust this value. For example, for 30 days: 30 * 24 * 60 * 60 = 2592000
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
 
 
 

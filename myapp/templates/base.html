@@ -91,14 +91,23 @@
 
         <!-- Drawer Content -->
         <nav>
+          <a href="{% url 'user_tips' %}"
+             class="block w-full text-left py-3 px-6 text-paleWhite transition-colors duration-150 ease-in-out rounded-md mb-1 hover:bg-primary">
+            Your Tips
+          </a>
           <a href="https://jesusvita.pythonanywhere.com" target="_blank" rel="noopener noreferrer" 
              class="block w-full text-left py-3 px-6 text-paleWhite transition-colors duration-150 ease-in-out rounded-md mb-1 hover:bg-primary">
             Tip Calculator
+          </a>
+          <a href="{% url 'benihana_qr' %}"
+             class="block w-full text-left py-3 px-6 text-paleWhite transition-colors duration-150 ease-in-out rounded-md mb-1 hover:bg-primary">
+            QR Menu
           </a>
           <a href="https://www.paypal.com/donate/?business=S7CHTATAM6CHY&no_recurring=0&currency_code=USD" target="_blank" rel="noopener noreferrer"
              class="block w-full text-left py-3 px-6 text-paleWhite transition-colors duration-150 ease-in-out rounded-md mb-1 hover:bg-primary">
             Support BeniBuddy
           </a>
+          
           <!-- Logout Form/Button -->
           <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}

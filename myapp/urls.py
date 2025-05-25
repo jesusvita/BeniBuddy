@@ -12,4 +12,5 @@ urlpatterns = [
     path('tips/<int:year>/<int:month>/', views.user_tips, name='user_tips'),
     path('set-cycle/', views.set_pay_cycle, name='set_pay_cycle'),
     path('delete-tip/<int:tip_id>/', views.delete_tip, name='delete_tip'),
+    path('benihana-qr/', views.benihana_qr_view, name='benihana_qr'),
 ]

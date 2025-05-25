@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Scan QR Code{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 text-center">
+    <div class="flex justify-center">
+        <img src="{% static 'myapp/images/benihanaQR.svg' %}" alt="Benihana QR Code" class="max-w-xs md:max-w-sm rounded-lg shadow-xl">
+    </div>
+    <p class="mt-6 text-gray-300">Point your camera at the QR code to scan.</p>
+</div>
+{% endblock %}

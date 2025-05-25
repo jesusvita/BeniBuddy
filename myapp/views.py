@@ -392,3 +392,7 @@ def delete_tip(request, tip_id):
 
     # Fallback for unexpected methods (though require_http_methods should prevent this)
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
+
+def benihana_qr_view(request):
+    """Renders the Benihana QR code page."""
+    return render(request, 'myapp/benihanaQR.html')

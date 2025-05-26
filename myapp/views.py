@@ -1,17 +1,22 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import SignUpForm, TipForm, PayCycleForm
-from .models import Tip, PaycheckCycle
+from .forms import SignUpForm, TipForm, PayCycleForm, CreateChatRoomForm
+from .models import Tip, PaycheckCycle, ChatRoom
 from django.contrib.auth.decorators import login_required
 import calendar
 from datetime import date, timedelta, datetime
 from django.db.models import Sum, DecimalField
 from django.db.models.functions import Coalesce
-from django.http import JsonResponse, HttpResponseForbidden, Http404
+from django.http import JsonResponse, HttpResponseForbidden, Http404, HttpResponse
 from django.forms.models import model_to_dict
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.db import models
 import decimal
+import qrcode
+import io
+import base64 # Import the base64 module
+
+
 
 def home(request):
     if request.user.is_authenticated:
@@ -396,3 +401,68 @@ def delete_tip(request, tip_id):
 def benihana_qr_view(request):
     """Renders the Benihana QR code page."""
     return render(request, 'myapp/benihanaQR.html')
+
+
+# @login_required # Uncomment if only logged-in users can create rooms
+def create_chat_room(request):
+    qr_image_base64 = None
+    room_url = None
+    deletion_phrase_display = None # To show the auto-generated phrase
+
+    if request.method == 'POST':
+        form = CreateChatRoomForm(request.POST)
+        if form.is_valid():
+            room_name = form.cleaned_data.get('name')
+            deletion_phrase = form.cleaned_data.get('deletion_phrase')
+
+            # For simplicity, let's auto-generate a deletion phrase if not provided
+            # In a real app, you might want to enforce user input or make it more secure
+            if not deletion_phrase:
+                import secrets
+                deletion_phrase = secrets.token_urlsafe(8) # Example: generate a random phrase
+                deletion_phrase_display = deletion_phrase # Store to display to user
+
+            chat_room = ChatRoom.objects.create(
+                name=room_name,
+                deletion_phrase=deletion_phrase
+                # created_by=request.user if request.user.is_authenticated else None
+            )
+
+            # Generate QR Code
+            # Ensure your domain is correct, especially for production
+            domain = request.build_absolute_uri('/')[:-1] # Gets http(s)://yourdomain.com
+            room_url = f"{domain}{chat_room.get_absolute_url()}" # Assumes you have get_absolute_url on model
+
+            img = qrcode.make(room_url)
+            buf = io.BytesIO()
+            img.save(buf, format='PNG')
+            qr_image_bytes = buf.getvalue() # Get the bytes data from the buffer
+            qr_image_base64 = base64.b64encode(qr_image_bytes).decode('utf-8') # Base64 encode the bytes, then decode the result to a string
+
+            # Instead of redirecting, show the QR code and link on the same page or a confirmation page
+            # return redirect('chat_room', room_id=chat_room.room_id)
+    else:
+        form = CreateChatRoomForm()
+
+    return render(request, 'myapp/create_chat.html', {
+        'form': form,
+        'qr_image_base64': qr_image_base64,
+        'room_url': room_url,
+        'deletion_phrase_display': deletion_phrase_display
+    })
+
+def chat_room_view(request, room_id):
+    try:
+        room = ChatRoom.objects.get(room_id=room_id, is_active=True)
+    except ChatRoom.DoesNotExist:
+        # Handle room not found or inactive (e.g., show an error page)
+        return HttpResponse("Chat room not found or has been closed.", status=404)
+    return render(request, 'myapp/chat_room.html', {
+        'room_id': room_id,
+        'room_name': room.name or f"Chat {room_id[:8]}..."
+    })
+
+# Add to ChatRoom model in models.py for get_absolute_url:
+# from django.urls import reverse
+# def get_absolute_url(self):
+#    return reverse('chat_room', kwargs={'room_id': str(self.room_id)})

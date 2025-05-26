@@ -1,8 +1,12 @@
 from django.db import models
+from django.conf import settings 
 from django.contrib.auth.models import User
 from django.utils.translation import gettext_lazy as _ # For choices
 from datetime import date, timedelta, datetime
+from django.urls import reverse
 import decimal
+import uuid
+
 
 class Tip(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -68,3 +72,19 @@ class PaycheckCycle(models.Model):
         #     # This is more complex, need to find end of month or specific day
         #     pass
         return None # Default if frequency logic isn't implemented
+
+class ChatRoom(models.Model):
+    room_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    # Optional: name for the room, can be set by creator
+    name = models.CharField(max_length=100, blank=True, null=True)
+    # Optional: link to the user who created the room
+    # created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    deletion_phrase = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+        
+    def __str__(self):
+        return f"Room {self.name or self.room_id}"
+
+    def get_absolute_url(self):
+        return reverse('chat_room', kwargs={'room_id': str(self.room_id)})

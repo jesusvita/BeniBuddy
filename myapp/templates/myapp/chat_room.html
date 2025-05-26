@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-2 text-white">{{ room_name }}</h1>
+    <div id="chat-log" class="h-96 overflow-y-auto border border-gray-700 bg-neutral-800 p-3 rounded-md mb-3 text-sm text-gray-200">
+        <!-- Messages will appear here -->
+    </div>
+    <div class="flex">
+        <input id="chat-message-input" type="text" placeholder="Type your message..."
+               class="flex-grow p-2 border border-gray-600 rounded-l-md focus:ring-red-500 focus:border-red-500 bg-neutral-700 text-white">
+        <button id="chat-message-submit"
+                class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-r-md">
+            Send
+        </button>
+    </div>
+    <p id="status-message" class="text-yellow-400 text-sm mt-2"></p>
+</div>
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const roomID = "{{ room_id|escapejs }}"; // Get room_id from Django context
+        const chatLog = document.getElementById('chat-log');
+        const messageInput = document.getElementById('chat-message-input');
+        const messageSubmit = document.getElementById('chat-message-submit');
+        const statusMessage = document.getElementById('status-message');
+
+        // Determine WebSocket protocol
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        const chatSocket = new WebSocket(
+            wsProtocol +
+            window.location.host +
+            '/ws/chat/' +
+            roomID +
+            '/'
+        );
+        let chatUsername = 'Anonymous'; // Default username
+
+        chatSocket.onopen = function(e) {
+            console.log('Chat socket connected');
+            statusMessage.textContent = 'Connected to chat.';
+            // Prompt for username when connection opens
+            const name = prompt("Please enter your name for the chat:", "Guest");
+            if (name && name.trim() !== "") {
+                chatUsername = name.trim();
+            }
+        };
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            console.log("Data received: ", data);
+
+            if (data.type === 'room_closed') {
+                chatLog.innerHTML += `<p class="text-red-500 font-semibold">${data.message}</p>`;
+                messageInput.disabled = true;
+                messageSubmit.disabled = true;
+                statusMessage.textContent = 'Chat room closed.';
+                // Optionally redirect or further disable UI
+                return;
+            }
+
+            const username = data.username || 'Anonymous';
+            const message = data.message;
+            chatLog.innerHTML += `<p><strong>${username}:</strong> ${message}</p>`;
+            chatLog.scrollTop = chatLog.scrollHeight; // Scroll to bottom
+        };
+
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly', e);
+            if (!statusMessage.textContent.includes('closed')) { // Avoid overwriting "room closed" message
+                statusMessage.textContent = 'Disconnected from chat. Try refreshing.';
+            }
+            messageInput.disabled = true;
+            messageSubmit.disabled = true;
+        };
+
+        chatSocket.onerror = function(err) {
+            console.error('WebSocket Error: ', err);
+            statusMessage.textContent = 'Error connecting to chat.';
+            messageInput.disabled = true;
+            messageSubmit.disabled = true;
+        };
+
+        messageInput.focus();
+        messageInput.onkeyup = function(e) {
+            if (e.key === 'Enter') {  // enter, return
+                messageSubmit.click();
+            }
+        };
+
+        messageSubmit.onclick = function(e) {
+            const message = messageInput.value;
+            if (message.trim() === '') return;
+
+            chatSocket.send(JSON.stringify({
+                'message': message,
+                'username': chatUsername // Send the collected username
+            }));
+            messageInput.value = '';
+        };
+    });
+</script>
+{% endblock %}

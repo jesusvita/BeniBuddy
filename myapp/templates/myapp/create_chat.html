@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Create Chat Room{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4 text-white">Create a New Chat Room</h1>
+
+    <form method="post" class="bg-neutral-800 p-6 rounded-lg shadow-md space-y-4">
+        {% csrf_token %}
+        <div>
+            <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-300">{{ form.name.label }}</label>
+            {{ form.name }}
+            {% if form.name.errors %}<p class="text-red-500 text-xs mt-1">{{ form.name.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div>
+            <label for="{{ form.deletion_phrase.id_for_label }}" class="block text-sm font-medium text-gray-300">{{ form.deletion_phrase.label }}</label>
+            {{ form.deletion_phrase }}
+            {% if form.deletion_phrase.errors %}<p class="text-red-500 text-xs mt-1">{{ form.deletion_phrase.errors|join:", " }}</p>{% endif %}
+            <p class="text-xs text-gray-400 mt-1">If you leave this blank, a phrase will be generated for you.</p>
+        </div>
+
+        <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+            Create Room
+        </button>
+    </form>
+
+    {% if qr_image_base64 %}
+    <div class="mt-8 p-6 bg-neutral-800 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold mb-3 text-white">Your Chat Room is Ready!</h2>
+        <p class="text-gray-300">Share this QR code or link:</p>
+        <div class="my-4 flex justify-center">
+            <img src="data:image/png;base64,{{ qr_image_base64 }}" alt="Chat Room QR Code" class="border border-gray-300">
+        </div>
+        <p class="text-gray-300">Link: <a href="{{ room_url }}" target="_blank" class="text-red-400 hover:text-red-300 underline">{{ room_url }}</a></p>
+        {% if deletion_phrase_display %}
+        <p class="text-yellow-400 mt-2"><strong>Important:</strong> Your auto-generated deletion phrase is: <code class="bg-gray-700 p-1 rounded">{{ deletion_phrase_display }}</code>. Type this in chat to close the room.</p>
+        {% else %}
+        <p class="text-yellow-400 mt-2">Remember your deletion phrase to close the room.</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

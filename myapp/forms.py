@@ -75,3 +75,14 @@ class PayCycleForm(forms.Form):
             'class': 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm'
         })
     )
+
+class CreateChatRoomForm(forms.Form):
+    name = forms.CharField(max_length=100, required=False, label="Optional Room Name",
+                           widget=forms.TextInput(attrs={'class': 'form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-gray-700 text-white p-2'}))
+    deletion_phrase = forms.CharField(
+        max_length=100,
+        required=True, # Or False if you auto-generate
+        label="Deletion Phrase (type this in chat to close room)",
+        widget=forms.TextInput(attrs={'class': 'form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 bg-gray-700 text-white p-2'})
+    )
+    # You could add created_by if you want to associate with a user

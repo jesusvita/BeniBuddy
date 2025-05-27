@@ -15,6 +15,7 @@
                 class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-r-md">
             Send
         </button>
+        
     </div>
     <p id="status-message" class="text-yellow-400 text-sm mt-2"></p>
 </div>
@@ -23,14 +24,26 @@
 {% block javascript %}
 {{ block.super }}
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const roomID = "{{ room_id|escapejs }}"; // Get room_id from Django context
+    document.addEventListener('DOMContentLoaded', () => 
+    {
         const chatLog = document.getElementById('chat-log');
         const messageInput = document.getElementById('chat-message-input');
         const messageSubmit = document.getElementById('chat-message-submit');
         const statusMessage = document.getElementById('status-message');
+        const roomID = "{{ room_id|escapejs }}"; // Ensure roomID is accessible
+        // ... any other elements you get ...
+ 
+        let chatUsername; // This will store the username for the chat
 
-        // Determine WebSocket protocol
+        // These values come from your Django view
+        // Use yesno filter to output JavaScript boolean literals 'true' or 'false'
+        const isCurrentUserTheCreator = {{ is_room_creator|yesno:"true,false,false" }};
+        const roomCreatorUsernameForDisplay = "{{ room_creator_username|escapejs|default:'Admin' }}"; // Keep this outside functions
+
+        // Disable send button and input initially
+        messageInput.disabled = true;
+        messageSubmit.disabled = true;
+
         const wsProtocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         const chatSocket = new WebSocket(
             wsProtocol +
@@ -39,70 +52,138 @@
             roomID +
             '/'
         );
-        let chatUsername = 'Anonymous'; // Default username
 
         chatSocket.onopen = function(e) {
             console.log('Chat socket connected');
             statusMessage.textContent = 'Connected to chat.';
-            // Prompt for username when connection opens
-            const name = prompt("Please enter your name for the chat:", "Guest");
-            if (name && name.trim() !== "") {
-                chatUsername = name.trim();
+            statusMessage.className = 'text-green-400 text-sm mt-2'; // Green for success
+            // Status message updates or other onopen logic can go here
+
+            if (isCurrentUserTheCreator) { // isCurrentUserTheCreator is already a boolean
+                chatUsername = roomCreatorUsernameForDisplay;
+                console.log(`Connected as room creator: ${chatUsername}`);
+                // Creator does NOT get prompted for a name.
+                // You might want to display a welcome message or update UI for the admin here.
+            } 
+            else {
+                // This is a regular user, prompt for a name.
+                const name = prompt("Please enter your name for the chat:", "Guest");
+                if (name && name.trim() !== "" && name !== null) {
+                    chatUsername = name.trim();
+                } else {
+                    // Fallback if the user cancels or enters an empty name
+                    chatUsername = "Guest" + Math.floor(Math.random() * 1000);
+                }
+                console.log(`Connected as guest: ${chatUsername}`);
             }
-        };
 
-        chatSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            console.log("Data received: ", data);
-
-            if (data.type === 'room_closed') {
-                chatLog.innerHTML += `<p class="text-red-500 font-semibold">${data.message}</p>`;
-                messageInput.disabled = true;
-                messageSubmit.disabled = true;
-                statusMessage.textContent = 'Chat room closed.';
-                // Optionally redirect or further disable UI
-                return;
-            }
-
-            const username = data.username || 'Anonymous';
-            const message = data.message;
-            chatLog.innerHTML += `<p><strong>${username}:</strong> ${message}</p>`;
-            chatLog.scrollTop = chatLog.scrollHeight; // Scroll to bottom
-        };
-
-        chatSocket.onclose = function(e) {
-            console.error('Chat socket closed unexpectedly', e);
-            if (!statusMessage.textContent.includes('closed')) { // Avoid overwriting "room closed" message
-                statusMessage.textContent = 'Disconnected from chat. Try refreshing.';
-            }
-            messageInput.disabled = true;
-            messageSubmit.disabled = true;
-        };
-
-        chatSocket.onerror = function(err) {
-            console.error('WebSocket Error: ', err);
-            statusMessage.textContent = 'Error connecting to chat.';
-            messageInput.disabled = true;
-            messageSubmit.disabled = true;
-        };
-
-        messageInput.focus();
-        messageInput.onkeyup = function(e) {
-            if (e.key === 'Enter') {  // enter, return
-                messageSubmit.click();
-            }
+            // Enable send controls now that username is set and socket is open
+            messageInput.disabled = false;
+            messageSubmit.disabled = false;
+            messageInput.focus(); // Focus on input field
+            // Any further logic that depends on chatUsername being set can follow.
+            // For example, if you send a "user joined" message:
+            // chatSocket.send(JSON.stringify({'type': 'join', 'username': chatUsername}));
         };
 
         messageSubmit.onclick = function(e) {
             const message = messageInput.value;
-            if (message.trim() === '') return;
+            console.log(`Attempting to send. Username: ${chatUsername}, Message: "${message}"`);
+            console.log(`WebSocket readyState: ${chatSocket.readyState} (0:CONNECTING, 1:OPEN, 2:CLOSING, 3:CLOSED)`);
 
-            chatSocket.send(JSON.stringify({
-                'message': message,
-                'username': chatUsername // Send the collected username
-            }));
-            messageInput.value = '';
+            if (message.trim() === '') {
+                return; // Don't send empty messages
+            }
+            if (chatSocket.readyState !== WebSocket.OPEN) {
+                 console.error('Cannot send message: WebSocket is not open.');
+                 statusMessage.textContent = 'Error: Connection not open. Please refresh.';
+                 statusMessage.className = 'text-red-400 text-sm mt-2';
+                 return;
+            }
+            if (!chatUsername) {
+                console.error('Cannot send message: chatUsername is not set.');
+                statusMessage.textContent = 'Error: Username not set. Please try refreshing.';
+                statusMessage.className = 'text-red-400 text-sm mt-2';
+                return;
+            }
+
+            // Check if the creator is typing the deletion phrase
+            // Ensure 'room' object and 'deletion_phrase' are passed to template context
+            const deletionPhrase = "{{ room.deletion_phrase|escapejs|default:'' }}"; 
+            if (isCurrentUserTheCreator && deletionPhrase && message.trim() === deletionPhrase) {
+                 console.log("Creator typed deletion phrase. Sending delete_room command.");
+                 chatSocket.send(JSON.stringify({
+                     'type': 'delete_room',
+                     'phrase': message.trim() // Send the phrase for backend verification
+                 }));
+            } else {
+                // Send a regular chat message
+                chatSocket.send(JSON.stringify({
+                    'type': 'chat_message', // Explicitly send message type
+                    'message': message,
+                    'username': chatUsername // Use the determined username
+                }));
+            }
+
+            messageInput.value = ''; // Clear input
+        };
+
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { // Check if Enter key was pressed
+                messageSubmit.click(); // Trigger send button click
+            }
+        });
+
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            const senderUsername = data.username || 'Anonymous';
+            const message = data.message;
+            const messageType = data.type || 'chat_message'; // Default to chat_message if type is missing
+
+            if (messageType === 'room_closed') {
+                console.log("Received room_closed message.");
+                chatLog.innerHTML += `<p><strong style="color: orange;">System:</strong> ${message}</p>`;
+                statusMessage.textContent = 'This room has been closed.';
+                statusMessage.className = 'text-orange-400 text-sm mt-2';
+                messageInput.disabled = true;
+                messageSubmit.disabled = true;
+                // Optionally close the socket from the client side
+                chatSocket.close();
+                return; // Don't process as a regular chat message
+            }
+
+            // Handle regular chat messages
+            if (messageType === 'chat_message') {
+                // Example: Distinguish admin messages visually
+                if (roomCreatorUsernameForDisplay && senderUsername === roomCreatorUsernameForDisplay) {
+                    // Display as "Server - [Creator's Actual Username]"
+                    chatLog.innerHTML += `<p><strong style="color: red;">Server - ${senderUsername}:</strong> ${message}</p>`;
+                } else {
+                    chatLog.innerHTML += `<p><strong>${senderUsername}:</strong> ${message}</p>`;
+                }
+                chatLog.scrollTop = chatLog.scrollHeight; // Scroll to bottom
+            }
+            // Add handlers for other message types here if needed
+        };
+
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
+            statusMessage.textContent = 'Disconnected from chat. Please refresh the page.';
+            statusMessage.className = 'text-red-400 text-sm mt-2';
+            // Disable send controls on close
+            messageInput.disabled = true;
+            messageSubmit.disabled = true;
+            // Update UI to show disconnected status
+        };
+
+        chatSocket.onerror = function(error) {
+            console.error('WebSocket Error: ', error);
+            statusMessage.textContent = 'Error connecting to chat. Please refresh the page.';
+            statusMessage.className = 'text-red-400 text-sm mt-2';
+            messageInput.disabled = true;
+            messageSubmit.disabled = true;
         };
     });
 </script>
+
 {% endblock %}

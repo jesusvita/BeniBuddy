@@ -44,29 +44,84 @@ class ChatConsumer(AsyncWebsocketConsumer):
         print(f"ChatConsumer: Received raw message: {text_data}")
         try:
             text_data_json = json.loads(text_data)
-            message_content = text_data_json['message']
+            message_type = text_data_json.get('type', 'chat_message') # Default to chat_message
             username = text_data_json.get('username', 'Anonymous')
-            print(f"ChatConsumer: Parsed message: '{message_content}' from user: '{username}'")
 
-            if hasattr(self, 'chat_room') and message_content == self.chat_room.deletion_phrase:
-                print(f"ChatConsumer: Deletion phrase received. Handling room deletion.")
+            if message_type == 'delete_room':
+                phrase_content = text_data_json.get('phrase')
+                print(f"ChatConsumer: Parsed delete_room command with phrase: '{phrase_content}' from user: '{username}'")
+                # The deletion phrase check is now implicitly part of handle_delete_room's logic
+                # if hasattr(self, 'chat_room') and phrase_content == self.chat_room.deletion_phrase:
+                # No, the handle_delete_room should verify the phrase against the DB record
                 await self.handle_room_deletion()
                 return
+            elif message_type == 'chat_message':
+                message_content = text_data_json.get('message')
+                if message_content is None: # Handle if 'message' key is missing for a chat_message type
+                    print(f"ChatConsumer: 'message' key not found for chat_message type: {text_data_json}")
+                    return
 
-            print(f"ChatConsumer: Sending message to group {self.room_group_name}")
+                print(f"ChatConsumer: Parsed chat_message: '{message_content}' from user: '{username}'")
+                print(f"ChatConsumer: Sending message to group {self.room_group_name}")
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'chat_message',
+                        'message': message_content,
+                        'username': username
+                    }
+                )
+            else:
+                print(f"ChatConsumer: Unknown message type received: {message_type}")
+
+        except json.JSONDecodeError:
+            print(f"ChatConsumer: Failed to decode JSON from received message: {text_data}")
+
+    async def handle_room_deletion(self):
+        """
+        Handles deactivating the chat room and notifying clients.
+        Assumes self.chat_room is the active room instance.
+        """
+        user = self.scope["user"]
+        print(f"ChatConsumer: handle_room_deletion initiated by user: {user}")
+
+        # Asynchronously get the creator of the chat room
+        try:
+            room_creator = await sync_to_async(lambda: self.chat_room.created_by)()
+        except Exception as e: # Catch potential errors during async access
+            print(f"ChatConsumer: Error accessing room_creator: {e}")
+            room_creator = None
+
+        # Double-check if the user is the creator (though this should be implicitly handled
+        # by the fact that only the creator knows the deletion phrase and is_active is true)
+        if not user.is_authenticated or room_creator != user:
+            print(f"ChatConsumer: Security check failed or user mismatch for room deletion. User: {user}, Room Creator: {self.chat_room.created_by}")
+            # Optionally send an error message back to the specific client
+            await self.send(text_data=json.dumps({
+                'type': 'error', # Use a specific type for client-side handling if needed
+                'message': 'You do not have permission to close this room.'
+            }))
+            return
+
+        try:
+            self.chat_room.is_active = False
+            await sync_to_async(self.chat_room.save)()
+            print(f"ChatConsumer: Room {self.chat_room.room_id} deactivated successfully.")
+
+            # Notify all clients in the room that it has been closed
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    'type': 'chat_message',
-                    'message': message_content,
-                    'username': username
+                    'type': 'room_closed_notification', # Use a distinct type for this event
+                    'message': 'This chat room has been closed by the administrator.'
                 }
             )
-        except json.JSONDecodeError:
-            print(f"ChatConsumer: Failed to decode JSON from received message: {text_data}")
-        except KeyError:
-            print(f"ChatConsumer: 'message' key not found in received JSON: {text_data_json}")
-
+            # Optionally, you can also close all connections from the server side,
+            # but sending a notification and letting clients handle it is common.
+        except Exception as e:
+            print(f"ChatConsumer: Error during room deactivation or notification: {e}")
+            # Handle error, maybe send a message back to the admin
+            await self.send(text_data=json.dumps({'type': 'error', 'message': 'Failed to close room due to a server error.'}))
 
     async def chat_message(self, event):
         message = event['message']
@@ -75,4 +130,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'message': message,
             'username': username
+        }))
+
+    async def room_closed_notification(self, event):
+        """
+        Sends the room closed notification to the client.
+        """
+        message = event['message']
+        print(f"ChatConsumer: Sending room_closed_notification: '{message}'")
+        await self.send(text_data=json.dumps({
+            'type': 'room_closed', # This type should be handled by client-side JS
+            'message': message
         }))

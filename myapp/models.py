@@ -77,8 +77,8 @@ class ChatRoom(models.Model):
     room_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     # Optional: name for the room, can be set by creator
     name = models.CharField(max_length=100, blank=True, null=True)
-    # Optional: link to the user who created the room
-    # created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    # Link to the user who created the room
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_chat_rooms')
     deletion_phrase = models.CharField(max_length=100)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

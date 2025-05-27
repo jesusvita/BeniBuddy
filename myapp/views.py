@@ -6,7 +6,7 @@ import calendar
 from datetime import date, timedelta, datetime
 from django.db.models import Sum, DecimalField
 from django.db.models.functions import Coalesce
-from django.http import JsonResponse, HttpResponseForbidden, Http404, HttpResponse
+from django.http import JsonResponse, HttpResponseForbidden, Http404, HttpResponse, HttpResponseNotFound
 from django.forms.models import model_to_dict
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
@@ -403,7 +403,7 @@ def benihana_qr_view(request):
     return render(request, 'myapp/benihanaQR.html')
 
 
-# @login_required # Uncomment if only logged-in users can create rooms
+@login_required # Ensure only logged-in users can create rooms to be an admin
 def create_chat_room(request):
     qr_image_base64 = None
     room_url = None
@@ -424,8 +424,8 @@ def create_chat_room(request):
 
             chat_room = ChatRoom.objects.create(
                 name=room_name,
-                deletion_phrase=deletion_phrase
-                # created_by=request.user if request.user.is_authenticated else None
+                deletion_phrase=deletion_phrase,
+                created_by=request.user # request.user is guaranteed by @login_required
             )
 
             # Generate QR Code
@@ -453,16 +453,37 @@ def create_chat_room(request):
 
 def chat_room_view(request, room_id):
     try:
+        # Only fetch active rooms
         room = ChatRoom.objects.get(room_id=room_id, is_active=True)
     except ChatRoom.DoesNotExist:
-        # Handle room not found or inactive (e.g., show an error page)
-        return HttpResponse("Chat room not found or has been closed.", status=404)
+        # If room doesn't exist or is_active is False, it's inaccessible
+        return HttpResponseNotFound("Chat room not found or has been closed.")
+
+
+    is_current_user_the_creator = False
+    # This is the username that will be associated with the "admin" of the room.
+    # It will be used by your JavaScript for the admin's display name and to identify admin messages.
+    admin_username_for_chat = "Admin" # Default if no specific creator or creator is anonymous
+
+    if room.created_by:
+        print(f"DEBUG: room.created_by is {room.created_by}")
+        print(f"DEBUG: room.created_by.username is {room.created_by.username}")
+        admin_username_for_chat = room.created_by.username
+        if request.user.is_authenticated and request.user == room.created_by:
+            is_current_user_the_creator = True
+    else:
+        print(f"DEBUG: room.created_by is None for room {room.room_id}")
+
+    print(f"DEBUG: admin_username_for_chat is being set to: {admin_username_for_chat}")
+
     return render(request, 'myapp/chat_room.html', {
         'room_id': room_id,
-        'room_name': room.name or f"Chat {room_id[:8]}..."
+        'room_name': room.name or f"Chat {str(room_id)[:8]}...", # Ensure room_id is string for slicing
+        'is_room_creator': is_current_user_the_creator,
+        'room_creator_username': admin_username_for_chat,
+        'room': room, # Pass the whole room object
     })
 
 # Add to ChatRoom model in models.py for get_absolute_url:
 # from django.urls import reverse
 # def get_absolute_url(self):
-#    return reverse('chat_room', kwargs={'room_id': str(self.room_id)})

@@ -8,6 +8,7 @@ import calendar
 from datetime import date, timedelta
 import json
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db.models import Sum
 
 
 @login_required
@@ -37,7 +38,9 @@ def expense_tracker_view(request, year=None, month=None):
         current_year, current_month = today.year, today.month
         current_date_for_calendar = date(current_year, current_month, 1)
 
-    cal = calendar.Calendar()
+    
+    cal = calendar.Calendar(firstweekday=6) # 0 is Monday, 6 is Sunday
+
     month_days = cal.monthdatescalendar(current_year, current_month)
 
     # Get expenses for the current user for the displayed month
@@ -51,6 +54,9 @@ def expense_tracker_view(request, year=None, month=None):
     for expense in expenses_for_month:
         if expense.expense_date.day in expenses_by_day:
             expenses_by_day[expense.expense_date.day].append(expense)
+
+    # Calculate total monthly expenses
+    total_monthly_expenses = expenses_for_month.aggregate(total=Sum('amount'))['total'] or 0.00
 
     if request.method == 'POST':
         form = ExpenseForm(request.POST)
@@ -80,7 +86,11 @@ def expense_tracker_view(request, year=None, month=None):
     expenses_by_day_serializable = {}
     for day_num, exp_list in expenses_by_day.items():
         expenses_by_day_serializable[str(day_num)] = [ # Ensure day_num is string for JS keys
-            {'name': exp.name, 'amount': exp.amount} for exp in exp_list # DjangoJSONEncoder handles Decimal
+            {
+                'name': exp.name,
+                'amount': exp.amount, # DjangoJSONEncoder handles Decimal
+                'category': exp.get_category_display() # Get the human-readable category name
+            } for exp in exp_list
         ]
     expenses_by_day_json_for_template = json.dumps(expenses_by_day_serializable, cls=DjangoJSONEncoder)
 
@@ -97,6 +107,7 @@ def expense_tracker_view(request, year=None, month=None):
         'next_month_month': next_month_month,
         'today_date': today,
         'expenses_by_day': expenses_by_day_serializable,  # dict: {day_num: [expense_obj, ...]}
+        'total_monthly_expenses': total_monthly_expenses,
         'expenses_by_day_json_for_template': expenses_by_day_json_for_template,
     }
     return render(request, 'expenses/expense_tracker.html', context)

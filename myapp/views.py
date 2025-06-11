@@ -121,6 +121,13 @@ def user_tips(request, year=None, month=None):
     total_monthly_cash = monthly_aggregation['total_cash'] 
     total_monthly_hours = monthly_aggregation['total_hours']
 
+    total_monthly_earnings = (
+    (total_monthly_tip or 0) +
+    (total_monthly_gratuity or 0) +
+    (total_monthly_cash or 0)
+    )
+
+
     # Create a dictionary for quick lookup in calendar generation
     tip_dict = {tip.date.date(): tip for tip in monthly_tips}
 
@@ -199,10 +206,11 @@ def user_tips(request, year=None, month=None):
         "recent_total_tip": recent_total_tip,
         "recent_total_gratuity": recent_total_gratuity,
         "paycheck_total": paycheck_total,
-        "paycheck_day": paycheck_day_display, # Use the new variable name for clarity
+        "paycheck_day": paycheck_day_display, 
         "paycheck_cycle": paycheck_cycle,
         "total_monthly_cash": total_monthly_cash,
         "recent_total_hours": recent_total_hours,
+        'total_monthly_earnings': total_monthly_earnings, 
         
         
     }

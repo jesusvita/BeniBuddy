@@ -20,7 +20,7 @@
 
     <!-- Month & Totals -->
     <div class="text-center">
-      <h2 class="text-2xl font-bold lightPink ">{{ current_month_name }} {{ current_year }}</h2>
+      <h2 class="text-2xl font-bold text-lightPink ">{{ current_month_name }} {{ current_year }}</h2>
       <div class="text-sm">
         <span class="text-red-300 font-medium">Total Expenses: ${{ total_monthly_expenses|floatformat:2 }}</span>
       </div>
@@ -96,6 +96,11 @@
             <input type="hidden" name="expense_date_selected" id="expense-date-selected">
 
             <div class="mb-4">
+                <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium text-lightPink mb-1">{{ form.category.label }}</label>
+                {{ form.category }} {# Styled by widgets in forms.py #}
+                {% if form.category.errors %}<div class="mt-1 text-red-400 text-xs">{{ form.category.errors|first }}</div>{% endif %}
+            </div>
+            <div class="mb-4">
                 <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-lightPink mb-1">{{ form.name.label }}</label>
                 {{ form.name }} {# Assumes form.name widget has Tailwind classes from forms.py #}
                 {% if form.name.errors %}<div class="mt-1 text-red-400 text-xs">{{ form.name.errors|first }}</div>{% endif %}
@@ -163,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(modalNoExpensesMessage) modalNoExpensesMessage.classList.add('hidden');
                 dailyExpenses.forEach(exp => {
                     const li = document.createElement('li');
-                    li.textContent = `${exp.name}: $${parseFloat(exp.amount).toFixed(2)}`;
+                    li.textContent = `[${exp.category || 'Other'}] ${exp.name}: $${parseFloat(exp.amount).toFixed(2)}`;
                     modalExpenseList.appendChild(li);
                 });
             } else {

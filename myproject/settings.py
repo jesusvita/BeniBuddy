@@ -45,6 +45,7 @@ ALLOWED_HOSTS = [host for host in ALLOWED_HOSTS if host]
 # Application definition
 
 INSTALLED_APPS = [
+    'expenses', 
     'myapp',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -214,4 +215,4 @@ if not DEBUG:
     # Optional: HSTS Settings (for advanced security, research before enabling)
     # SECURE_HSTS_SECONDS = 31536000  # 1 year
     # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    # SECURE_HSTS_PRELOAD = True
+    # SECURE_HSTS_PRELOAD = Tru

@@ -1,14 +1,17 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.urls import reverse
 from .models import Expense
 from .forms import ExpenseForm
+from decimal import Decimal
 import calendar
 from datetime import date, timedelta
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db.models import Sum
+from django.views.decorators.http import require_http_methods, require_POST
+from django.http import JsonResponse
 
 
 @login_required
@@ -58,6 +61,28 @@ def expense_tracker_view(request, year=None, month=None):
     # Calculate total monthly expenses
     total_monthly_expenses = expenses_for_month.aggregate(total=Sum('amount'))['total'] or 0.00
 
+    # Find the current week and calculate its total expenses
+    current_week_total = Decimal('0.00')
+    current_week_start_date_str = None
+
+    for week_of_dates in month_days:
+        if today in week_of_dates:
+            # Found the week containing today
+            first_day_of_week = week_of_dates[0] # The first date object in the week list
+            current_week_start_date_str = first_day_of_week.strftime("%b %d") # e.g., "Jun 03"
+
+            for day_date_obj in week_of_dates:
+                # Only sum expenses for days in the current month
+                if day_date_obj.month == current_month:
+                    day_s_expenses = expenses_by_day.get(day_date_obj.day, [])
+                    for expense in day_s_expenses:
+                        current_week_total += expense.amount
+            break # Stop searching once the current week is found
+
+    # Calculate total monthly expenses (This calculation remains)
+    total_monthly_expenses = expenses_for_month.aggregate(total=Sum('amount'))['total'] or 0.00
+
+
     if request.method == 'POST':
         form = ExpenseForm(request.POST)
         expense_date_str = request.POST.get('expense_date_selected')
@@ -87,6 +112,7 @@ def expense_tracker_view(request, year=None, month=None):
     for day_num, exp_list in expenses_by_day.items():
         expenses_by_day_serializable[str(day_num)] = [ # Ensure day_num is string for JS keys
             {
+                'id': exp.id, # Add expense ID
                 'name': exp.name,
                 'amount': exp.amount, # DjangoJSONEncoder handles Decimal
                 'category': exp.get_category_display() # Get the human-readable category name
@@ -109,5 +135,45 @@ def expense_tracker_view(request, year=None, month=None):
         'expenses_by_day': expenses_by_day_serializable,  # dict: {day_num: [expense_obj, ...]}
         'total_monthly_expenses': total_monthly_expenses,
         'expenses_by_day_json_for_template': expenses_by_day_json_for_template,
+        'current_week_total': current_week_total,
+        'current_week_start_date_str': current_week_start_date_str,
+        
     }
     return render(request, 'expenses/expense_tracker.html', context)
+
+@login_required
+@require_http_methods(["DELETE"]) # Or require_POST if you prefer POST for deletion
+def delete_expense_view(request, expense_id):
+    expense = get_object_or_404(Expense, id=expense_id)
+    if expense.user != request.user:
+        return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
+    
+    try:
+        expense.delete()
+        return JsonResponse({'status': 'success', 'message': 'Expense deleted successfully.'})
+    except Exception as e:
+        # Log the error e
+        return JsonResponse({'status': 'error', 'message': 'Could not delete expense.'}, status=500)
+
+@login_required
+@require_POST
+def edit_expense_view(request, expense_id):
+    expense = get_object_or_404(Expense, id=expense_id, user=request.user)
+
+    try:
+        data = json.loads(request.body)
+        name = data.get('name')
+        amount = data.get('amount')
+        category = data.get('category')
+
+        if not name or not amount or not category:
+            return JsonResponse({'status': 'error', 'message': 'Missing fields.'}, status=400)
+
+        expense.name = name
+        expense.amount = Decimal(amount)
+        expense.category = category
+        expense.save()
+
+        return JsonResponse({'status': 'success', 'message': 'Expense updated successfully.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': 'Failed to update expense.'}, status=500)

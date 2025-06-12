@@ -20,10 +20,7 @@
 
     <!-- Month & Totals -->
     <div class="text-center">
-      <h2 class="text-2xl font-bold text-lightPink ">{{ current_month_name }} {{ current_year }}</h2>
-      <div class="text-sm">
-        <span class="text-red-300 font-medium">Total Expenses: ${{ total_monthly_expenses|floatformat:2 }}</span>
-      </div>
+      <h2 class="text-2xl font-bold text-white ">{{ current_month_name }} {{ current_year }}</h2>
     </div>
 
     <!-- Next -->
@@ -82,6 +79,20 @@
       {% endfor %}
     {% endfor %}
   </div>
+
+  <!-- Totals Section Below Calendar -->
+  <div class="text-center mt-6 px-4 sm:px-8 text-sm sm:text-base"> {# Added text size classes #}
+      <h3 class="text-xl font-semibold text-paleWhite mb-2">Monthly Summary</h3>
+      <p class="text-red-300 font-bold text-lg tracking-tight mb-4">
+          Total Monthly Expenses: ${{ total_monthly_expenses|floatformat:2 }}
+      </p>
+
+      {% if current_week_start_date_str %} {# Only show if we found the current week #}
+          <p class="text-softBlue font-semibold tracking-tight">
+              Current Week (Week of {{ current_week_start_date_str }}): ${{ current_week_total|floatformat:2 }}
+          </p>
+      {% endif %}
+  </div>
 </div>
 
 <!-- Expense Modal (ensure this matches your previously designed expense modal) -->
@@ -94,6 +105,7 @@
         <form method="post" id="expense-form" novalidate>
             {% csrf_token %}
             <input type="hidden" name="expense_date_selected" id="expense-date-selected">
+            {# Placeholder for editing ID, will be added by JS if needed #}
 
             <div class="mb-4">
                 <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium text-lightPink mb-1">{{ form.category.label }}</label>
@@ -135,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeModalButton = document.getElementById('close-modal-button');
     const expenseDateSelectedInput = document.getElementById('expense-date-selected');
     const modalTitle = document.getElementById('modal-title');
-    const calendarDays = document.querySelectorAll('.calendar-day'); // Targets the clickable day divs
+    const calendarDays = document.querySelectorAll('.calendar-day');
     const expenseForm = document.getElementById('expense-form');
     const firstFormInput = expenseForm ? expenseForm.querySelector('input[name="name"]') : null;
 
@@ -143,36 +155,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalExpenseList = document.getElementById('modal-expense-list');
     const modalNoExpensesMessage = document.getElementById('modal-no-expenses-message');
 
-    // Parse the JSON data for expenses passed from the Django view
     const expensesByDayData = JSON.parse('{{ expenses_by_day_json_for_template|safe }}');
 
     calendarDays.forEach(dayCell => {
         dayCell.addEventListener('click', () => {
             const dateStr = dayCell.getAttribute('data-date');
-            if (!dateStr) return; // Should not happen if data-date is always present
+            if (!dateStr) return;
 
             expenseDateSelectedInput.value = dateStr;
-            // Format date for display in modal title (e.g., "January 1, 2024")
-            const dateObj = new Date(dateStr + 'T00:00:00'); // Ensure correct parsing by adding time part
+            const dateObj = new Date(dateStr + 'T00:00:00');
             const formattedDate = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
             
             modalTitle.textContent = `Manage Expenses for ${formattedDate}`;
             modalSelectedDateDisplay.textContent = formattedDate;
 
-            // Populate existing expenses for the selected day in the modal
-            modalExpenseList.innerHTML = ''; // Clear previous list items
-            const dayOfMonthStr = dateObj.getDate().toString(); // Get day as string (1-31)
+            modalExpenseList.innerHTML = '';
+            const dayOfMonthStr = dateObj.getDate().toString();
             const dailyExpenses = expensesByDayData[dayOfMonthStr] || [];
 
             if (dailyExpenses.length > 0) {
                 if(modalNoExpensesMessage) modalNoExpensesMessage.classList.add('hidden');
                 dailyExpenses.forEach(exp => {
                     const li = document.createElement('li');
-                    li.textContent = `[${exp.category || 'Other'}] ${exp.name}: $${parseFloat(exp.amount).toFixed(2)}`;
+                    li.classList.add('flex', 'justify-between', 'items-center', 'py-1', 'border-b', 'border-softBlue', 'last:border-b-0');
+                    li.dataset.expenseId = exp.id;
+
+                    const expenseText = document.createElement('span');
+                    expenseText.textContent = `[${exp.category || 'Other'}] ${exp.name}: $${parseFloat(exp.amount).toFixed(2)}`;
+                    li.appendChild(expenseText);
+
+                    const buttonsDiv = document.createElement('div');
+                    buttonsDiv.classList.add('space-x-2');
+
+                    const editButton = createExpenseActionButton('Edit', 'edit-expense-btn', exp.id, ['bg-blue-500', 'hover:bg-blue-600']);
+                    const deleteButton = createExpenseActionButton('Delete', 'delete-expense-btn', exp.id, ['bg-red-500', 'hover:bg-red-600']);
+                    buttonsDiv.append(editButton, deleteButton);
+                    li.appendChild(buttonsDiv);
                     modalExpenseList.appendChild(li);
                 });
             } else {
-                // Ensure the "no expenses" message is a child before trying to remove 'hidden'
                 if (!modalExpenseList.contains(modalNoExpensesMessage) && modalNoExpensesMessage) {
                      modalExpenseList.appendChild(modalNoExpensesMessage);
                 }
@@ -182,6 +203,13 @@ document.addEventListener('DOMContentLoaded', () => {
             expenseModal.classList.remove('hidden');
             if (firstFormInput) {
                 firstFormInput.focus();
+                document.getElementById('expense-form').setAttribute('action', "{% url 'expenses:expense_tracker' year=current_year month=current_month_numeric %}");
+                document.getElementById('expense-form').reset();
+                document.getElementById('modal-title').textContent = `Manage Expenses for ${formattedDate}`;
+                const editingIdField = document.getElementById('editing-expense-id');
+                if (editingIdField) editingIdField.remove();
+                const submitButton = expenseForm.querySelector('button[type="submit"]');
+                if (submitButton) submitButton.textContent = 'Save Expense';
             }
         });
     });
@@ -194,7 +222,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (expenseModal) {
-        // Close modal if clicking outside of it
         expenseModal.addEventListener('click', (event) => {
             if (event.target === expenseModal) {
                 expenseModal.classList.add('hidden');
@@ -203,7 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Close modal on Escape key
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && expenseModal && !expenseModal.classList.contains('hidden')) {
             expenseModal.classList.add('hidden');
@@ -211,17 +237,149 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // If form has errors (e.g., after a failed POST), re-open modal with the data
+    function createExpenseActionButton(text, baseClass, expenseId, tailwindClasses = []) {
+        const button = document.createElement('button');
+        button.textContent = text;
+        button.classList.add(baseClass, 'text-white', 'text-xs', 'font-semibold', 'py-1', 'px-2', 'rounded', ...tailwindClasses);
+        button.dataset.expenseId = expenseId;
+        return button;
+    }
+    
+    modalExpenseList.addEventListener('click', function(event) {
+        const target = event.target;
+
+        if (target.classList.contains('delete-expense-btn')) {
+            const expenseId = target.dataset.expenseId;
+            if (confirm('Are you sure you want to delete this expense?')) {
+                fetch(`/expenses/delete/${expenseId}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => { throw new Error(text || response.statusText) });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        const listItem = target.closest('li');
+                        if (listItem) listItem.remove();
+                        alert(data.message);
+                    } else {
+                        alert(`Error: ${data.message}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting expense:', error);
+                    alert('An error occurred while deleting the expense.');
+                });
+            }
+        }
+        else if (target.classList.contains('edit-expense-btn')) {
+            const expenseId = target.dataset.expenseId;
+            const listItem = target.closest('li');
+            const expenseText = listItem.querySelector('span').textContent;
+
+            const categoryMatch = expenseText.match(/\[(.*?)\]/);
+            const nameMatch = expenseText.match(/\] (.*?): \$/);
+            const amountMatch = expenseText.match(/: \$([\d\.]+)/);
+
+            const category = categoryMatch ? categoryMatch[1] : '';
+            const name = nameMatch ? nameMatch[1] : '';
+            const amount = amountMatch ? amountMatch[1] : '';
+
+            document.getElementById('{{ form.category.id_for_label }}').value = category;
+            document.getElementById('{{ form.name.id_for_label }}').value = name;
+            document.getElementById('{{ form.amount.id_for_label }}').value = amount;
+
+            let editingInput = document.getElementById('editing-expense-id');
+            if (!editingInput) {
+                editingInput = document.createElement('input');
+                editingInput.type = 'hidden';
+                editingInput.id = 'editing-expense-id';
+                editingInput.name = 'editing_expense_id';
+                expenseForm.appendChild(editingInput);
+            }
+            editingInput.value = expenseId;
+
+            const submitButton = expenseForm.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.textContent = 'Update Expense';
+        }
+    });
+
     {% if form.errors %}
         const submittedDate = "{{ request.POST.expense_date_selected }}";
         if (submittedDate) {
             const dayCellToReopen = document.querySelector(`.calendar-day[data-date="${submittedDate}"]`);
             if (dayCellToReopen) {
-                // Timeout to ensure other DOM manipulations (if any) are done
                 setTimeout(() => { dayCellToReopen.click(); }, 0);
             }
         }
     {% endif %}
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // 🚀 New unified submit logic for both create and edit:
+    expenseForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const expenseIdInput = document.getElementById('editing-expense-id');
+        const expenseId = expenseIdInput ? expenseIdInput.value : null;
+
+        const name = document.getElementById('{{ form.name.id_for_label }}').value;
+        const amount = document.getElementById('{{ form.amount.id_for_label }}').value;
+        const category = document.getElementById('{{ form.category.id_for_label }}').value;
+
+        const formData = {
+            name: name,
+            amount: amount,
+            category: category
+        };
+
+        if (expenseId) {
+            fetch(`/expenses/edit/${expenseId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Expense updated successfully!');
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error editing expense:', error);
+                alert('An error occurred while editing the expense.');
+            });
+        } else {
+            this.submit();
+        }
+    });
+
 });
 </script>
 {% endblock %}

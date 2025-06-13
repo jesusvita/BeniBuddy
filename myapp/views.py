@@ -71,9 +71,8 @@ def set_pay_cycle(request):
 
 @login_required
 def user_tips(request, year=None, month=None):
-    # Use timezone-aware date if timezones are enabled in settings.py
-    # today_date = timezone.localdate()
-    today_date = date.today() # Use this if timezones are not critical/enabled
+    from django.utils import timezone
+    today_date = timezone.localdate()  # Timezone aware
 
     current_year, current_month = today_date.year, today_date.month
 
@@ -81,21 +80,14 @@ def user_tips(request, year=None, month=None):
     year = int(year) if year else current_year
     month = int(month) if month else current_month
 
-    # Validate month/year
+    # Validate month
     if not (1 <= month <= 12):
         month = current_month
 
-    # --- Month Navigation Logic ---
-    if month == 1:
-        prev_month, prev_year = 12, year - 1
-    else:
-        prev_month, prev_year = month - 1, year
-    if month == 12:
-        next_month, next_year = 1, year + 1
-    else:
-        next_month, next_year = month + 1, year
+    # Month navigation
+    prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
+    next_year, next_month = (year + 1, 1) if month == 12 else (year, month + 1)
 
-    # --- Calendar Data Fetching ---
     try:
         first_day_month = date(year, month, 1)
         last_day_val = calendar.monthrange(year, month)[1]
@@ -103,95 +95,102 @@ def user_tips(request, year=None, month=None):
     except ValueError:
         return redirect('user_tips')
 
-    # Fetch tips for the displayed calendar month
+    # Fetch tips for the month
     monthly_tips = Tip.objects.filter(
         user=request.user,
         date__date__range=[first_day_month, last_day_month]
     ).order_by('date')
 
-    # Calculate totals for the displayed month - CORRECTED AGGREGATION
+    # Aggregate monthly totals
     monthly_aggregation = monthly_tips.aggregate(
         total_tip=Coalesce(Sum('amount'), decimal.Decimal('0.00'), output_field=DecimalField()),
         total_gratuity=Coalesce(Sum('gratuity'), decimal.Decimal('0.00'), output_field=DecimalField()),
-        total_cash=Coalesce(Sum('cash_made'), decimal.Decimal('0.00'), output_field=DecimalField()), # Add cash
-        total_hours=Coalesce(Sum('hours_worked'), decimal.Decimal('0.00'), output_field=DecimalField()) # Add hours
+        total_cash=Coalesce(Sum('cash_made'), decimal.Decimal('0.00'), output_field=DecimalField()),
+        total_hours=Coalesce(Sum('hours_worked'), decimal.Decimal('0.00'), output_field=DecimalField())
     )
+
     total_monthly_tip = monthly_aggregation['total_tip']
     total_monthly_gratuity = monthly_aggregation['total_gratuity']
-    total_monthly_cash = monthly_aggregation['total_cash'] 
+    total_monthly_cash = monthly_aggregation['total_cash']
     total_monthly_hours = monthly_aggregation['total_hours']
 
     total_monthly_earnings = (
-    (total_monthly_tip or 0) +
-    (total_monthly_gratuity or 0) +
-    (total_monthly_cash or 0)
+        (total_monthly_tip or 0) +
+        (total_monthly_gratuity or 0) +
+        (total_monthly_cash or 0)
     )
 
-
-    # Create a dictionary for quick lookup in calendar generation
+    # Prepare tips dict keyed by date for quick lookup
     tip_dict = {tip.date.date(): tip for tip in monthly_tips}
 
-    # --- Calendar Grid Generation ---
-    cal = calendar.Calendar(firstweekday=6) # Sunday as first day
+    # Generate calendar grid weeks with Sunday first
+    cal = calendar.Calendar(firstweekday=6)
     weeks = []
-    for week_days in cal.monthdatescalendar(year, month):
+    for week_dates in cal.monthdatescalendar(year, month):
         week_data = []
-        for day_date in week_days:
+        for day_date in week_dates:
             if day_date.month == month:
                 tip_for_day = tip_dict.get(day_date)
                 week_data.append({
                     'day': day_date.day,
                     'tip': tip_for_day,
-                    'date': day_date.strftime('%Y-%m-%d')
+                    'date': day_date.strftime('%Y-%m-%d'),
                 })
             else:
                 week_data.append(None)
         weeks.append(week_data)
 
+    # Paycheck cycle data (unchanged)
+    paycheck_cycle, _ = PaycheckCycle.objects.get_or_create(user=request.user)
 
-    # --- Paycheck Calculation Logic (Based ONLY on Anchor Date) ---
-    paycheck_cycle, created = PaycheckCycle.objects.get_or_create(user=request.user)
-    paycheck_anchor_date = None # The user's configured start date
-    target_cycle_start_date = None # Start date of the cycle beginning on the anchor date
-    target_cycle_end_date = None   # End date of the cycle beginning on the anchor date
-    paycheck_day_display = None    # The end date to display in the template
-    recent_total_tip = 0.0
-    recent_total_gratuity = 0.0
-    recent_total_cash = decimal.Decimal('0.00') # Add cash
-    recent_total_hours = decimal.Decimal('0.00') # Add hours
-    paycheck_total = 0.0
+    # --- Paycheck Estimation Logic ---
+    paycheck_day_display = None
+    recent_total_tip = decimal.Decimal('0.00')
+    recent_total_gratuity = decimal.Decimal('0.00')
+    recent_total_cash = decimal.Decimal('0.00')
+    recent_total_hours = decimal.Decimal('0.00')
+    paycheck_total = decimal.Decimal('0.00')
 
-    if paycheck_cycle.start_date and paycheck_cycle.frequency:
-        paycheck_anchor_date = paycheck_cycle.start_date
-        cycle_length = 14 if paycheck_cycle.frequency == PaycheckCycle.PayFrequency.BIWEEKLY else (7 if paycheck_cycle.frequency == PaycheckCycle.PayFrequency.WEEKLY else 0)
+    if paycheck_cycle and paycheck_cycle.start_date and paycheck_cycle.frequency:
+        # This logic determines the current or next pay period based on the cycle settings
+        # and calculates totals for that period.
+        period_start_date = None
+        period_end_date = None
 
-        if cycle_length > 0:
-            target_cycle_start_date = paycheck_anchor_date
-            target_cycle_end_date = target_cycle_start_date + timedelta(days=cycle_length - 1)
-            paycheck_day_display = target_cycle_end_date + timedelta(days=5) # Assuming 5 days after cycle end
+        if paycheck_cycle.frequency == PaycheckCycle.PayFrequency.BIWEEKLY:
+            # Example logic for bi-weekly cycle
+            # You might need more sophisticated logic to find the *current* or *next upcoming* period
+            # This example finds the period that would contain today_date or the one just after cycle.start_date
+            cycle_anchor_date = paycheck_cycle.start_date
+            days_from_anchor = (today_date - cycle_anchor_date).days
 
-            recent_tips = Tip.objects.filter(
+            if days_from_anchor < 0: # today_date is before the cycle anchor
+                period_start_date = cycle_anchor_date
+            else:
+                # Calculate how many full 14-day segments from the anchor date to get to the current period's start
+                num_segments = days_from_anchor // 14
+                period_start_date = cycle_anchor_date + timedelta(days=num_segments * 14)
+            
+            period_end_date = period_start_date + timedelta(days=13)
+            # Calculate the actual payday, 5 days after the period ends
+            paycheck_day_display = period_end_date + timedelta(days=5)
+
+            recent_tips_qs = Tip.objects.filter(
                 user=request.user,
-                date__date__range=[target_cycle_start_date, target_cycle_end_date]
+                date__date__range=[period_start_date, period_end_date]
             )
-
-            # --- Updated Aggregation for paycheck cycle ---
-            cycle_aggregation = recent_tips.aggregate(
-                total_tip=Coalesce(Sum('amount'), decimal.Decimal('0.00'), output_field=DecimalField()),
-                total_gratuity=Coalesce(Sum('gratuity'), decimal.Decimal('0.00'), output_field=DecimalField()),
-                total_cash=Coalesce(Sum('cash_made'), decimal.Decimal('0.00'), output_field=DecimalField()), # Add cash
-                total_hours=Coalesce(Sum('hours_worked'), decimal.Decimal('0.00'), output_field=DecimalField()) # Add hours
+            recent_aggregation = recent_tips_qs.aggregate(
+                sum_tip=Coalesce(Sum('amount'), decimal.Decimal('0.00')),
+                sum_gratuity=Coalesce(Sum('gratuity'), decimal.Decimal('0.00')),
+                sum_cash=Coalesce(Sum('cash_made'), decimal.Decimal('0.00')),
+                sum_hours=Coalesce(Sum('hours_worked'), decimal.Decimal('0.00'))
             )
-            recent_total_tip = cycle_aggregation['total_tip']
-            recent_total_gratuity = cycle_aggregation['total_gratuity']
-            recent_total_cash = cycle_aggregation['total_cash']
-            recent_total_hours = cycle_aggregation['total_hours']
-            paycheck_total = recent_total_tip + recent_total_gratuity
+            recent_total_tip = recent_aggregation['sum_tip']
+            recent_total_gratuity = recent_aggregation['sum_gratuity']
+            recent_total_cash = recent_aggregation['sum_cash']
+            recent_total_hours = recent_aggregation['sum_hours']
+            paycheck_total = recent_total_tip + recent_total_gratuity + recent_total_cash # Adjust as per your total definition
 
-
-
-    # --- Context ---
-    # Make sure to update the context key name if you changed the variable name
     context = {
         "weeks": weeks,
         "year": year,
@@ -203,17 +202,18 @@ def user_tips(request, year=None, month=None):
         "next_month": next_month,
         "total_monthly_tip": total_monthly_tip,
         "total_monthly_gratuity": total_monthly_gratuity,
+        "total_monthly_cash": total_monthly_cash,
+        "total_monthly_hours": total_monthly_hours,
+        "total_monthly_earnings": total_monthly_earnings,
+        "paycheck_cycle": paycheck_cycle,
+        "paycheck_day": paycheck_day_display,
         "recent_total_tip": recent_total_tip,
         "recent_total_gratuity": recent_total_gratuity,
-        "paycheck_total": paycheck_total,
-        "paycheck_day": paycheck_day_display, 
-        "paycheck_cycle": paycheck_cycle,
-        "total_monthly_cash": total_monthly_cash,
+        "recent_total_cash": recent_total_cash,
         "recent_total_hours": recent_total_hours,
-        'total_monthly_earnings': total_monthly_earnings, 
-        
-        
+        "paycheck_total": paycheck_total,
     }
+
     return render(request, "myapp/user_tips.html", context)
 
 @login_required

@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load expense_tags %} {# Make sure you have the 'get_item' custom filter #}
+{% load expense_tags %}
 {% load static %}
 
 {% block title %}Expense Tracker - {{ current_month_name }} {{ current_year }}{% endblock %}
@@ -9,55 +9,40 @@
 
   <!-- Header Navigation -->
   <div class="flex flex-wrap px-4 sm:px-8 justify-between items-center gap-2 mb-4">
-
-    <!-- Previous -->
     <a href="{% url 'expenses:expense_tracker' year=prev_month_year month=prev_month_month %}"
        class="font-semibold py-0.5 px-2 sm:py-1 sm:px-4 rounded-full shadow transition hover:bg-red-900"
-       style="background-color: #880808;">
-        <span class="hidden sm:inline">← Previous</span>
-        <span class="inline sm:hidden">←</span>
-    </a>
+       style="background-color: #880808;">← Previous</a>
 
-    <!-- Month & Totals -->
     <div class="text-center">
-      <h2 class="text-2xl font-bold text-white ">{{ current_month_name }} {{ current_year }}</h2>
+      <h2 class="text-2xl font-bold text-white">{{ current_month_name }} {{ current_year }}</h2>
     </div>
 
-    <!-- Next -->
     <a href="{% url 'expenses:expense_tracker' year=next_month_year month=next_month_month %}"
        class="font-semibold py-0.5 px-2 sm:py-1 sm:px-4 rounded-full shadow transition hover:bg-red-900"
-       style="background-color: #880808;">
-       <span class="hidden sm:inline">Next →</span>
-        <span class="inline sm:hidden">→</span>
-    </a>
+       style="background-color: #880808;">Next →</a>
   </div>
 
-  <!-- Weekday Labels -->
+  <!-- Weekdays -->
   <div class="grid grid-cols-7 text-center font-semibold text-[#93A8AC] mb-2">
-    {# Adjust to match your user_tips.html if it starts on a different day, e.g., Mon #}
-    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div>
-    <div>Thu</div><div>Fri</div><div>Sat</div>
+    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
   </div>
 
-  <!-- Calendar Grid -->
-  <div class="grid grid-cols-7 sm:grid-cols-7 gap-x-1 gap-y-2 text-sm md:gap-2">
+  <!-- Calendar -->
+  <div class="grid grid-cols-7 gap-x-1 gap-y-3 text-sm md:gap-2">
     {% for week in month_days %}
       {% for day_date in week %}
         <div class="relative transition-transform duration-150 hover:scale-[1.03]">
           {% if day_date.month == current_month_numeric %}
-            {# This div is clickable to open the expense modal #}
             <div class="calendar-day block h-14 sm:h-16 rounded-lg shadow hover:bg-gray-100 transition cursor-pointer
                         {% if day_date == today_date %} bg-primary text-paleWhite hover:bg-primary-dark {% else %} bg-white text-gray-700 hover:bg-gray-50 {% endif %}"
                  data-date="{{ day_date|date:'Y-m-d' }}">
-              <!-- Date Number -->
-              <div class="absolute px-1 text-[0.6rem] sm:text-xs font-semibold {% if day_date == today_date %} text-paleWhite {% else %} text-gray-700 {% endif %}">{{ day_date.day }}</div>
+              <div class="absolute px-1 text-[0.6rem] sm:text-xs font-semibold">{{ day_date.day }}</div>
 
-              <!-- Expense Info -->
               <div class="flex flex-col justify-center items-end h-full font-semibold pt-3 px-1 sm:pt-1">
                 {% with day_expenses_list=expenses_by_day|get_item:day_date.day %}
                   {% if day_expenses_list %}
-                    {% for expense_item in day_expenses_list|slice:":2" %} {# Show first 2 expense amounts #}
-                      <div class="font-sans font-[700] text-red-700 text-[0.5rem] sm:text-[0.65rem] leading-tight sm:leading-normal tabular-nums"
+                    {% for expense_item in day_expenses_list|slice:":2" %}
+                      <div class="font-sans font-[700] text-red-700 text-[0.5rem] sm:text-[0.65rem] leading-tight tabular-nums"
                            title="{{ expense_item.name }}: ${{ expense_item.amount|floatformat:2 }}">
                           ${{ expense_item.amount|floatformat:2 }}
                       </div>
@@ -65,14 +50,11 @@
                     {% if day_expenses_list|length > 2 %}
                       <div class="text-red-500 text-xs">...</div>
                     {% endif %}
-                  {% else %}
-                     <div class="text-xs text-gray-400 italic"></div> {# Placeholder if no expenses #}
                   {% endif %}
                 {% endwith %}
               </div>
             </div>
           {% else %}
-            <!-- Empty box for days not in current month -->
             <div class="h-14 sm:h-16 rounded-lg bg-[#93A8AC] opacity-30"></div>
           {% endif %}
         </div>
@@ -80,306 +62,91 @@
     {% endfor %}
   </div>
 
-  <!-- Totals Section Below Calendar -->
-  <div class="text-center mt-6 px-4 sm:px-8 text-sm sm:text-base"> {# Added text size classes #}
-      <h3 class="text-xl font-semibold text-paleWhite mb-2">Monthly Summary</h3>
-      <p class="text-red-300 font-bold text-lg tracking-tight mb-4">
-          Total Monthly Expenses: ${{ total_monthly_expenses|floatformat:2 }}
-      </p>
-
-      {% if current_week_start_date_str %} {# Only show if we found the current week #}
-          <p class="text-softBlue font-semibold tracking-tight">
-              Current Week (Week of {{ current_week_start_date_str }}): ${{ current_week_total|floatformat:2 }}
-          </p>
-      {% endif %}
+  <!-- Monthly Summary -->
+  <div class="text-center mt-6 px-4 sm:px-8 text-sm sm:text-base">
+    <h3 class="text-xl font-semibold text-paleWhite mb-2">Monthly Summary</h3>
+    <p class="text-red-300 font-bold text-lg mb-4">
+      Total Monthly Expenses: ${{ total_monthly_expenses|floatformat:2 }}
+    </p>
+    {% if current_week_start_date_str %}
+    <p class="text-softBlue font-semibold">
+      Current Week (Week of {{ current_week_start_date_str }}): ${{ current_week_total|floatformat:2 }}
+    </p>
+    {% endif %}
   </div>
 </div>
 
-<!-- Expense Modal (ensure this matches your previously designed expense modal) -->
-<div id="expense-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-deepBlue p-6 rounded-lg shadow-xl w-full max-w-md"> {# Using your theme colors #}
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-xl font-semibold text-paleWhite" id="modal-title">Manage Expenses</h3>
-            <button id="close-modal-button" class="text-lightPink hover:text-primary text-2xl">&times;</button>
-        </div>
-        <form method="post" id="expense-form" novalidate>
-            {% csrf_token %}
-            <input type="hidden" name="expense_date_selected" id="expense-date-selected">
-            {# Placeholder for editing ID, will be added by JS if needed #}
-
-            <div class="mb-4">
-                <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium text-lightPink mb-1">{{ form.category.label }}</label>
-                {{ form.category }} {# Styled by widgets in forms.py #}
-                {% if form.category.errors %}<div class="mt-1 text-red-400 text-xs">{{ form.category.errors|first }}</div>{% endif %}
-            </div>
-            <div class="mb-4">
-                <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-lightPink mb-1">{{ form.name.label }}</label>
-                {{ form.name }} {# Assumes form.name widget has Tailwind classes from forms.py #}
-                {% if form.name.errors %}<div class="mt-1 text-red-400 text-xs">{{ form.name.errors|first }}</div>{% endif %}
-            </div>
-            <div class="mb-6">
-                <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-lightPink mb-1">{{ form.amount.label }}</label>
-                {{ form.amount }} {# Assumes form.amount widget has Tailwind classes from forms.py #}
-                {% if form.amount.errors %}<div class="mt-1 text-red-400 text-xs">{{ form.amount.errors|first }}</div>{% endif %}
-            </div>
-            <button type="submit"
-                    class="w-full bg-primary hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-deepBlue focus:ring-primary transition-colors">
-                Save Expense
-            </button>
-        </form>
-        <!-- Display existing expenses for the day -->
-        <div id="modal-existing-expenses" class="mt-6">
-            <h4 class="text-lg font-semibold text-paleWhite mb-2">Recorded Expenses for <span id="modal-selected-date-display"></span>:</h4>
-            <ul id="modal-expense-list" class="list-disc list-inside text-lightPink text-sm max-h-32 overflow-y-auto">
-                <li id="modal-no-expenses-message" class="italic">No expenses for this day.</li>
-            </ul>
-        </div>
+<!-- Manage Expenses Modal -->
+<div id="expense-modal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 hidden">
+  <div class="bg-deepBlue p-6 rounded-lg shadow-xl w-full max-w-md">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-semibold text-paleWhite" id="modal-title">Manage Expenses</h3>
+      <button id="add-expense-button" class="ml-auto bg-primary hover:bg-red-700 text-white font-semibold py-1 px-3 rounded shadow-sm">+ Add</button>
+      <button id="close-modal-button" class="text-lightPink hover:text-primary text-2xl ml-2">&times;</button>
     </div>
+
+    <div id="modal-existing-expenses" class="mt-6">
+      <ul id="modal-expense-list" class="list-disc list-inside text-lightPink text-sm max-h-40 overflow-y-auto"></ul>
+      <div id="modal-no-expenses-message" class="italic text-lightPink hidden">No expenses for this day.</div>
+    </div>
+  </div>
 </div>
 
+<!-- Add/Edit Expense Modal -->
+<div id="expense-form-modal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 hidden">
+  <div class="bg-deepBlue p-6 rounded-lg shadow-xl w-full max-w-md">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-xl font-semibold text-paleWhite" id="expense-form-modal-title">Add Expense</h3>
+      <button id="close-expense-form-modal" class="text-lightPink hover:text-primary text-2xl">&times;</button>
+    </div>
+
+    <form method="post" id="expense-form" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="expense_date_selected" id="expense-date-selected">
+      <input type="hidden" name="editing_expense_id" id="editing-expense-id">
+
+      <div class="mb-4">
+        <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium text-lightPink mb-1">{{ form.category.label }}</label>
+        {{ form.category }}
+      </div>
+      <div class="mb-4">
+        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-lightPink mb-1">{{ form.name.label }}</label>
+        {{ form.name }}
+      </div>
+      <div class="mb-6">
+        <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-lightPink mb-1">{{ form.amount.label }}</label>
+        {{ form.amount }}
+      </div>
+
+      <button type="submit"
+        class="w-full bg-primary hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition-colors">
+        Save
+      </button>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block javascript %}
 {{ block.super }}
+{% load static %} {# Ensure static is loaded if not already in base.html or earlier in this block #}
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const expenseModal = document.getElementById('expense-modal');
-    const closeModalButton = document.getElementById('close-modal-button');
-    const expenseDateSelectedInput = document.getElementById('expense-date-selected');
-    const modalTitle = document.getElementById('modal-title');
-    const calendarDays = document.querySelectorAll('.calendar-day');
-    const expenseForm = document.getElementById('expense-form');
-    const firstFormInput = expenseForm ? expenseForm.querySelector('input[name="name"]') : null;
+  // Pass Django template data to global JavaScript variables
+  window.expensesByDayData = JSON.parse('{{ expenses_by_day_json_for_template|safe }}');
+  window.formFieldIds = {
+    category: '{{ form.category.id_for_label }}',
+    name: '{{ form.name.id_for_label }}',
+    amount: '{{ form.amount.id_for_label }}'
+  };
 
-    const modalSelectedDateDisplay = document.getElementById('modal-selected-date-display');
-    const modalExpenseList = document.getElementById('modal-expense-list');
-    const modalNoExpensesMessage = document.getElementById('modal-no-expenses-message');
-
-    const expensesByDayData = JSON.parse('{{ expenses_by_day_json_for_template|safe }}');
-
-    calendarDays.forEach(dayCell => {
-        dayCell.addEventListener('click', () => {
-            const dateStr = dayCell.getAttribute('data-date');
-            if (!dateStr) return;
-
-            expenseDateSelectedInput.value = dateStr;
-            const dateObj = new Date(dateStr + 'T00:00:00');
-            const formattedDate = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            
-            modalTitle.textContent = `Manage Expenses for ${formattedDate}`;
-            modalSelectedDateDisplay.textContent = formattedDate;
-
-            modalExpenseList.innerHTML = '';
-            const dayOfMonthStr = dateObj.getDate().toString();
-            const dailyExpenses = expensesByDayData[dayOfMonthStr] || [];
-
-            if (dailyExpenses.length > 0) {
-                if(modalNoExpensesMessage) modalNoExpensesMessage.classList.add('hidden');
-                dailyExpenses.forEach(exp => {
-                    const li = document.createElement('li');
-                    li.classList.add('flex', 'justify-between', 'items-center', 'py-1', 'border-b', 'border-softBlue', 'last:border-b-0');
-                    li.dataset.expenseId = exp.id;
-
-                    const expenseText = document.createElement('span');
-                    expenseText.textContent = `[${exp.category || 'Other'}] ${exp.name}: $${parseFloat(exp.amount).toFixed(2)}`;
-                    li.appendChild(expenseText);
-
-                    const buttonsDiv = document.createElement('div');
-                    buttonsDiv.classList.add('space-x-2');
-
-                    const editButton = createExpenseActionButton('Edit', 'edit-expense-btn', exp.id, ['bg-blue-500', 'hover:bg-blue-600']);
-                    const deleteButton = createExpenseActionButton('Delete', 'delete-expense-btn', exp.id, ['bg-red-500', 'hover:bg-red-600']);
-                    buttonsDiv.append(editButton, deleteButton);
-                    li.appendChild(buttonsDiv);
-                    modalExpenseList.appendChild(li);
-                });
-            } else {
-                if (!modalExpenseList.contains(modalNoExpensesMessage) && modalNoExpensesMessage) {
-                     modalExpenseList.appendChild(modalNoExpensesMessage);
-                }
-                if(modalNoExpensesMessage) modalNoExpensesMessage.classList.remove('hidden');
-            }
-
-            expenseModal.classList.remove('hidden');
-            if (firstFormInput) {
-                firstFormInput.focus();
-                document.getElementById('expense-form').setAttribute('action', "{% url 'expenses:expense_tracker' year=current_year month=current_month_numeric %}");
-                document.getElementById('expense-form').reset();
-                document.getElementById('modal-title').textContent = `Manage Expenses for ${formattedDate}`;
-                const editingIdField = document.getElementById('editing-expense-id');
-                if (editingIdField) editingIdField.remove();
-                const submitButton = expenseForm.querySelector('button[type="submit"]');
-                if (submitButton) submitButton.textContent = 'Save Expense';
-            }
-        });
-    });
-
-    if (closeModalButton) {
-        closeModalButton.addEventListener('click', () => {
-            expenseModal.classList.add('hidden');
-            if (expenseForm) expenseForm.reset();
-        });
-    }
-
-    if (expenseModal) {
-        expenseModal.addEventListener('click', (event) => {
-            if (event.target === expenseModal) {
-                expenseModal.classList.add('hidden');
-                if (expenseForm) expenseForm.reset();
-            }
-        });
-    }
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && expenseModal && !expenseModal.classList.contains('hidden')) {
-            expenseModal.classList.add('hidden');
-            if (expenseForm) expenseForm.reset();
-        }
-    });
-
-    function createExpenseActionButton(text, baseClass, expenseId, tailwindClasses = []) {
-        const button = document.createElement('button');
-        button.textContent = text;
-        button.classList.add(baseClass, 'text-white', 'text-xs', 'font-semibold', 'py-1', 'px-2', 'rounded', ...tailwindClasses);
-        button.dataset.expenseId = expenseId;
-        return button;
-    }
-    
-    modalExpenseList.addEventListener('click', function(event) {
-        const target = event.target;
-
-        if (target.classList.contains('delete-expense-btn')) {
-            const expenseId = target.dataset.expenseId;
-            if (confirm('Are you sure you want to delete this expense?')) {
-                fetch(`/expenses/delete/${expenseId}/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken'),
-                        'Content-Type': 'application/json'
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(text => { throw new Error(text || response.statusText) });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.status === 'success') {
-                        const listItem = target.closest('li');
-                        if (listItem) listItem.remove();
-                        alert(data.message);
-                    } else {
-                        alert(`Error: ${data.message}`);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error deleting expense:', error);
-                    alert('An error occurred while deleting the expense.');
-                });
-            }
-        }
-        else if (target.classList.contains('edit-expense-btn')) {
-            const expenseId = target.dataset.expenseId;
-            const listItem = target.closest('li');
-            const expenseText = listItem.querySelector('span').textContent;
-
-            const categoryMatch = expenseText.match(/\[(.*?)\]/);
-            const nameMatch = expenseText.match(/\] (.*?): \$/);
-            const amountMatch = expenseText.match(/: \$([\d\.]+)/);
-
-            const category = categoryMatch ? categoryMatch[1] : '';
-            const name = nameMatch ? nameMatch[1] : '';
-            const amount = amountMatch ? amountMatch[1] : '';
-
-            document.getElementById('{{ form.category.id_for_label }}').value = category;
-            document.getElementById('{{ form.name.id_for_label }}').value = name;
-            document.getElementById('{{ form.amount.id_for_label }}').value = amount;
-
-            let editingInput = document.getElementById('editing-expense-id');
-            if (!editingInput) {
-                editingInput = document.createElement('input');
-                editingInput.type = 'hidden';
-                editingInput.id = 'editing-expense-id';
-                editingInput.name = 'editing_expense_id';
-                expenseForm.appendChild(editingInput);
-            }
-            editingInput.value = expenseId;
-
-            const submitButton = expenseForm.querySelector('button[type="submit"]');
-            if (submitButton) submitButton.textContent = 'Update Expense';
-        }
-    });
-
-    {% if form.errors %}
-        const submittedDate = "{{ request.POST.expense_date_selected }}";
-        if (submittedDate) {
-            const dayCellToReopen = document.querySelector(`.calendar-day[data-date="${submittedDate}"]`);
-            if (dayCellToReopen) {
-                setTimeout(() => { dayCellToReopen.click(); }, 0);
-            }
-        }
-    {% endif %}
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    // 🚀 New unified submit logic for both create and edit:
-    expenseForm.addEventListener('submit', function(event) {
-        event.preventDefault();
-
-        const expenseIdInput = document.getElementById('editing-expense-id');
-        const expenseId = expenseIdInput ? expenseIdInput.value : null;
-
-        const name = document.getElementById('{{ form.name.id_for_label }}').value;
-        const amount = document.getElementById('{{ form.amount.id_for_label }}').value;
-        const category = document.getElementById('{{ form.category.id_for_label }}').value;
-
-        const formData = {
-            name: name,
-            amount: amount,
-            category: category
-        };
-
-        if (expenseId) {
-            fetch(`/expenses/edit/${expenseId}/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken'),
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    alert('Expense updated successfully!');
-                    window.location.reload();
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error editing expense:', error);
-                alert('An error occurred while editing the expense.');
-            });
-        } else {
-            this.submit();
-        }
-    });
-
-});
+  // For handling re-opening modal on form errors
+  {% if form.errors %}
+    window.djangoFormErrors = true;
+    window.submittedExpenseDate = "{{ request.POST.expense_date_selected|escapejs }}";
+  {% else %}
+    window.djangoFormErrors = false;
+    window.submittedExpenseDate = null;
+  {% endif %}
 </script>
+<script src="{% static 'expenses/js/expenses_calendar.js' %}"></script>
 {% endblock %}

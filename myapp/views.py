@@ -147,7 +147,6 @@ def user_tips(request, year=None, month=None):
     paycheck_day_display = None
     recent_total_tip = decimal.Decimal('0.00')
     recent_total_gratuity = decimal.Decimal('0.00')
-    recent_total_cash = decimal.Decimal('0.00')
     recent_total_hours = decimal.Decimal('0.00')
     paycheck_total = decimal.Decimal('0.00')
 
@@ -189,7 +188,7 @@ def user_tips(request, year=None, month=None):
             recent_total_gratuity = recent_aggregation['sum_gratuity']
             recent_total_cash = recent_aggregation['sum_cash']
             recent_total_hours = recent_aggregation['sum_hours']
-            paycheck_total = recent_total_tip + recent_total_gratuity + recent_total_cash # Adjust as per your total definition
+            paycheck_total = recent_total_tip + recent_total_gratuity # Adjust as per your total definition
 
     context = {
         "weeks": weeks,
@@ -209,7 +208,6 @@ def user_tips(request, year=None, month=None):
         "paycheck_day": paycheck_day_display,
         "recent_total_tip": recent_total_tip,
         "recent_total_gratuity": recent_total_gratuity,
-        "recent_total_cash": recent_total_cash,
         "recent_total_hours": recent_total_hours,
         "paycheck_total": paycheck_total,
     }

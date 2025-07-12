@@ -177,3 +177,14 @@ def edit_expense_view(request, expense_id):
         return JsonResponse({'status': 'success', 'message': 'Expense updated successfully.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': 'Failed to update expense.'}, status=500)
+
+@require_POST
+def expense_delete(request, expense_id):
+    expense = get_object_or_404(Expense, id=expense_id)
+    expense.delete()
+    messages.success(request, "Expense deleted successfully.")
+    # Redirect back to the expense tracker page with year and month params
+    # Adjust these params as needed to keep the user on the current calendar page
+    year = request.GET.get('year') or expense.date.year
+    month = request.GET.get('month') or expense.date.month
+    return redirect('expenses:expense_tracker', year=year, month=month)

@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load expense_tags %}
 {% load static %}
+{% load sum_filters %}
 
 {% block title %}Expense Tracker - {{ current_month_name }} {{ current_year }}{% endblock %}
 
@@ -34,26 +35,31 @@
         <div class="relative transition-transform duration-150 hover:scale-[1.03]">
           {% if day_date.month == current_month_numeric %}
             <div class="calendar-day block h-14 sm:h-16 rounded-lg shadow hover:bg-gray-100 transition cursor-pointer
-                        {% if day_date == today_date %} bg-primary text-paleWhite hover:bg-primary-dark {% else %} bg-white text-gray-700 hover:bg-gray-50 {% endif %}"
-                 data-date="{{ day_date|date:'Y-m-d' }}">
-              <div class="absolute px-1 text-[0.6rem] sm:text-xs font-semibold">{{ day_date.day }}</div>
+            {% if day_date == today_date %} bg-primary text-paleWhite hover:bg-primary-dark {% else %} bg-white text-gray-700 hover:bg-gray-50 {% endif %}"
+     data-date="{{ day_date|date:'Y-m-d' }}">
 
-              <div class="flex flex-col justify-center items-end h-full font-semibold pt-3 px-1 sm:pt-1">
-                {% with day_expenses_list=expenses_by_day|get_item:day_date.day %}
-                  {% if day_expenses_list %}
-                    {% for expense_item in day_expenses_list|slice:":2" %}
-                      <div class="font-sans font-[700] text-red-700 text-[0.5rem] sm:text-[0.65rem] leading-tight tabular-nums"
-                           title="{{ expense_item.name }}: ${{ expense_item.amount|floatformat:2 }}">
-                          ${{ expense_item.amount|floatformat:2 }}
-                      </div>
-                    {% endfor %}
-                    {% if day_expenses_list|length > 2 %}
-                      <div class="text-red-500 text-xs">...</div>
-                    {% endif %}
-                  {% endif %}
-                {% endwith %}
-              </div>
-            </div>
+          <div class="absolute px-1 text-[0.6rem] sm:text-xs font-semibold">{{ day_date.day }}</div>
+
+          <div class="flex flex-col justify-center items-end h-full font-semibold pt-3 px-1 sm:pt-1">
+            {% with day_expenses_list=expenses_by_day|get_item:day_date.day %}
+              {% if day_expenses_list %}
+                {% for expense_item in day_expenses_list|slice:":2" %}
+                  <div class="font-sans font-[700] text-red-700 text-[0.5rem] sm:text-[0.65rem] leading-tight tabular-nums"
+                      title="{{ expense_item.name }}: ${{ expense_item.amount|floatformat:2 }}">
+                      ${{ expense_item.amount|floatformat:2 }}
+                  </div>
+                {% endfor %}
+                {% if day_expenses_list|length > 2 %}
+                  <div class="text-red-500 text-xs">...</div>
+                {% endif %}
+                <!-- Total amount for the day -->
+                <div class="text-red-800 font-bold text-xs sm:text-sm mt-1" title="Total for the day">
+                  Total: ${{ day_expenses_list|sum_attr:"amount"|floatformat:2 }}
+                </div>
+              {% endif %}
+            {% endwith %}
+          </div>
+        </div>
           {% else %}
             <div class="h-14 sm:h-16 rounded-lg bg-[#93A8AC] opacity-30"></div>
           {% endif %}
@@ -86,7 +92,23 @@
     </div>
 
     <div id="modal-existing-expenses" class="mt-6">
-      <ul id="modal-expense-list" class="list-disc list-inside text-lightPink text-sm max-h-40 overflow-y-auto"></ul>
+      <ul id="modal-expense-list" class="list-disc list-inside text-lightPink text-sm max-h-40 overflow-y-auto">
+        
+        <!-- Example static structure for one expense item -->
+        <li class="flex justify-between items-center py-1">
+          <span class="truncate" title="Groceries: $25.00">Groceries - $25.00</span>
+          <div class="flex gap-2 ml-2">
+            <button class="edit-expense-btn text-primary hover:text-red-700" data-expense-id="123" aria-label="Edit Groceries expense">
+              ✎
+            </button>
+            <button class="delete-expense-btn text-red-600 hover:text-red-800" data-expense-id="123" aria-label="Delete Groceries expense">
+              🗑
+            </button>
+          </div>
+        </li>
+      </ul>
+
+      </ul>
       <div id="modal-no-expenses-message" class="italic text-lightPink hidden">No expenses for this day.</div>
     </div>
   </div>
@@ -125,6 +147,7 @@
     </form>
   </div>
 </div>
+
 {% endblock %}
 
 {% block javascript %}

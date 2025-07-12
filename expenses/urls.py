@@ -8,4 +8,5 @@ urlpatterns = [
     path('<int:year>/<int:month>/', views.expense_tracker_view, name='expense_tracker'),
     path('delete/<int:expense_id>/', views.delete_expense_view, name='delete_expense'),
     path('edit/<int:expense_id>/', views.edit_expense_view, name='edit_expense'),
+    path('delete/<int:expense_id>/', views.expense_delete, name='expense_delete'),
 ]

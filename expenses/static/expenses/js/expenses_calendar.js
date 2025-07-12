@@ -38,28 +38,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderExpenseList(expenses) {
     const list = document.getElementById('modal-expense-list');
-    const emptyMsg = document.getElementById('modal-no-expenses-message');
-    list.innerHTML = '';
+  list.innerHTML = ''; // clear previous
 
-    if (expenses.length > 0) {
-      expenses.forEach(exp => {
-        const li = document.createElement('li');
-        li.textContent = `[${exp.category}] ${exp.name}: $${parseFloat(exp.amount).toFixed(2)}`;
-        li.dataset.expenseId = exp.id;
-        li.dataset.categoryValue = exp.category; // Store the actual category value if needed for select
-        li.dataset.name = exp.name;
-        li.dataset.amount = exp.amount;
+  if (!expenses.length) {
+    document.getElementById('modal-no-expenses-message').classList.remove('hidden');
+    return;
+  } else {
+    document.getElementById('modal-no-expenses-message').classList.add('hidden');
+  }
 
-        li.addEventListener('click', () => {
-          openEditForm(li);
-        });
+  expenses.forEach(expense => {
+    const li = document.createElement('li');
+    li.className = 'flex justify-between items-center py-1';
 
-        list.appendChild(li);
-      });
-      if (emptyMsg) emptyMsg.classList.add('hidden');
-    } else {
-      if (emptyMsg) emptyMsg.classList.remove('hidden');
-    }
+    const span = document.createElement('span');
+    span.className = 'truncate';
+    span.title = `${expense.name}: $${expense.amount.toFixed(2)}`;
+    span.textContent = `${expense.name} - $${expense.amount.toFixed(2)}`;
+
+    const btnContainer = document.createElement('div');
+    btnContainer.className = 'flex gap-2 ml-2';
+
+    const editBtn = document.createElement('button');
+    editBtn.className = 'edit-expense-btn text-primary hover:text-red-700';
+    editBtn.dataset.expenseId = expense.id;
+    editBtn.ariaLabel = `Edit ${expense.name} expense`;
+    editBtn.textContent = '✎';
+    // attach your edit handler here, e.g. editBtn.addEventListener('click', ...);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'delete-expense-btn text-red-600 hover:text-red-800';
+    deleteBtn.dataset.expenseId = expense.id;
+    deleteBtn.ariaLabel = `Delete ${expense.name} expense`;
+    deleteBtn.textContent = '🗑';
+    // attach your delete handler here
+
+    btnContainer.appendChild(editBtn);
+    btnContainer.appendChild(deleteBtn);
+
+    li.appendChild(span);
+    li.appendChild(btnContainer);
+
+    list.appendChild(li);
+  });
   }
 
   function openEditForm(li) {

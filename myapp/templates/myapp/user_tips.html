@@ -137,30 +137,65 @@
 
   <!-- Line 2: Totals (Moved Here) -->
 
+  <div class="text-center text-md mt-4">
 
 
-  <div class="text-center text-sm mt-4 px-4 sm:px-8"> {# Added mt-4 for spacing and padding #}
+  <div class="inline-flex items-center justify-center space-x-2 whitespace-nowrap">
 
 
-      {# Tips, Gratuity, and Cash on one line #}
+    <span class="text-green-300 font-semibold tracking-tight whitespace-nowrap">
 
 
-      <span class="text-green-300 font-semibold text-base tracking-tight">Tips: ${{ total_monthly_tip|floatformat:2 }}</span> &nbsp;|&nbsp;
+      Tips: ${{ total_monthly_tip|floatformat:2 }}
 
 
-      <span class="text-blue-300 font-semibold text-base tracking-tight">Gratuity: ${{ total_monthly_gratuity|floatformat:2 }}</span>
+    </span>
 
 
-      &nbsp;|&nbsp; <span class="text-yellow-400 font-semibold text-base tracking-tight">Cash: ${{ total_monthly_cash|floatformat:2 }}</span>
+    <span class="text-gray-400 whitespace-nowrap">|</span>
 
 
-      <br class="my-0.5"> {# Small break for spacing #}
+    <span class="text-blue-300 font-semibold tracking-tight whitespace-nowrap">
 
 
-      <span class="text-orange-300 font-bold text-lg tracking-tight">Total: ${{ total_overall|floatformat:2 }}</span>
+      Gratuity: ${{ total_monthly_gratuity|floatformat:2 }}
+
+
+    </span>
+
+
+    <span class="text-gray-400 whitespace-nowrap">|</span>
+
+
+    <span class="text-yellow-400 font-semibold tracking-tight whitespace-nowrap">
+
+
+      Cash: ${{ total_monthly_cash|floatformat:2 }}
+
+
+    </span>
+
+  </div>
+
+
+
+
+  <div class="mt-1">
+
+
+    <span class="text-orange-300 font-bold text-lg tracking-tight">
+
+
+      Total: ${{ total_overall|floatformat:2 }}
+
+
+    </span>
 
 
   </div>
+
+
+</div>
 
   <!-- Estimated Paycheck Box -->
   <div class="bg-gray-300 text-[#424B54] p-2 sm:p-4 rounded-lg shadow mt-6 relative text-sm sm:text-base">

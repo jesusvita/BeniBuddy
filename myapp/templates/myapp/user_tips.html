@@ -7,36 +7,69 @@
 <div class="rounded min-h-screen px-1 py-6 bg-gradient-to-b from-neutral-950 to-stone-900 text-white">
 
   <!-- Header Navigation -->
-  <div class="flex flex-wrap px-4 sm:px-8 justify-between items-center gap-2 mb-4">
+  <div class="px-4 sm:px-8 mb-4">
 
-    <!-- Previous -->
-    <a href="{% url 'user_tips' prev_year prev_month %}"
-       class="font-semibold py-0.5 px-2 sm:py-1 sm:px-4 rounded-full shadow transition hover:bg-red-900"
-       style="background-color: #880808;">
-        <span class="hidden sm:inline">← Previous</span>
-        <span class="inline sm:hidden">←</span>
-    </a>
 
-    <!-- Month & Totals -->
-    <div class="text-center">
-      <h2 class="text-2xl font-bold lightPink ">{{ month_name }} {{ year }}</h2>
-      <div class="text-sm">
-        {# TODO: Update these totals if needed to include cash/hours #}
-        <span class="text-green-300 font-medium">Tips: ${{ total_monthly_tip|floatformat:2 }}</span> &nbsp;|&nbsp;
-        <span class="text-blue-300 font-medium">Gratuity: ${{ total_monthly_gratuity|floatformat:2 }}</span>
-        <br>
-        <span class="text-yellow-400 font-medium">Cash: ${{ total_monthly_cash|floatformat:2 }}</span>
+    <!-- Line 1: Arrows and Month/Year -->
+
+
+    <div class="flex flex-wrap justify-between items-center gap-2">
+
+
+      <!-- Previous -->
+
+
+      <a href="{% url 'user_tips' prev_year prev_month %}"
+
+
+         class="font-semibold py-0.5 px-2 sm:py-1 sm:px-4 rounded-full shadow transition hover:bg-red-900"
+
+
+         style="background-color: #880808;">
+
+
+          <span class="hidden sm:inline">← Previous</span>
+
+
+          <span class="inline sm:hidden">←</span>
+
+
+      </a>
+
+
+
+
+
+      <!-- Month/Year ONLY -->
+
+
+      <h2 class="text-2xl font-bold text-white text-center">{{ month_name }} {{ year }}</h2>
+
+
+
+
+
+      <!-- Next -->
+
+
+      <a href="{% url 'user_tips' next_year next_month %}"
+
+
+         class="font-semibold py-0.5 px-2 sm:py-1 sm:px-4 rounded-full shadow transition hover:bg-red-900"
+
+
+         style="background-color: #880808;">
+
+
+         <span class="hidden sm:inline">Next →</span>
+
+
+          <span class="inline sm:hidden">→</span>
+
+
+      </a>
+
     </div>
-    </div>
-
-    <!-- Next -->
-    <a href="{% url 'user_tips' next_year next_month %}"
-       class="font-semibold py-0.5 px-2 sm:py-1 sm:px-4 rounded-full shadow transition hover:bg-red-900"
-       style="background-color: #880808;">
-       <span class="hidden sm:inline">Next →</span>
-        <span class="inline sm:hidden">→</span>
-    </a>
-  </div>
 
   <!-- Weekday Labels -->
   <div class="grid grid-cols-7 text-center font-semibold text-[#93A8AC] mb-2">
@@ -100,6 +133,33 @@
         </div>
       {% endfor %}
     {% endfor %}
+  </div>
+
+  <!-- Line 2: Totals (Moved Here) -->
+
+
+
+  <div class="text-center text-sm mt-4 px-4 sm:px-8"> {# Added mt-4 for spacing and padding #}
+
+
+      {# Tips, Gratuity, and Cash on one line #}
+
+
+      <span class="text-green-300 font-semibold text-base tracking-tight">Tips: ${{ total_monthly_tip|floatformat:2 }}</span> &nbsp;|&nbsp;
+
+
+      <span class="text-blue-300 font-semibold text-base tracking-tight">Gratuity: ${{ total_monthly_gratuity|floatformat:2 }}</span>
+
+
+      &nbsp;|&nbsp; <span class="text-yellow-400 font-semibold text-base tracking-tight">Cash: ${{ total_monthly_cash|floatformat:2 }}</span>
+
+
+      <br class="my-0.5"> {# Small break for spacing #}
+
+
+      <span class="text-orange-300 font-bold text-lg tracking-tight">Total: ${{ total_overall|floatformat:2 }}</span>
+
+
   </div>
 
   <!-- Estimated Paycheck Box -->

@@ -185,6 +185,8 @@ def user_tips(request, year=None, month=None):
             recent_total_cash = cycle_aggregation['total_cash']
             recent_total_hours = cycle_aggregation['total_hours']
             paycheck_total = recent_total_tip + recent_total_gratuity
+            total_overall = recent_total_tip + recent_total_gratuity + recent_total_cash
+
 
 
 
@@ -208,6 +210,7 @@ def user_tips(request, year=None, month=None):
         "paycheck_cycle": paycheck_cycle,
         "total_monthly_cash": total_monthly_cash,
         "recent_total_hours": recent_total_hours,
+        "total_overall": total_overall,
         
         
     }

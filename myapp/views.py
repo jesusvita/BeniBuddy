@@ -158,6 +158,7 @@ def user_tips(request, year=None, month=None):
     recent_total_cash = decimal.Decimal('0.00') # Add cash
     recent_total_hours = decimal.Decimal('0.00') # Add hours
     paycheck_total = 0.0
+    total_overall = 0.0
 
     if paycheck_cycle.start_date and paycheck_cycle.frequency:
         paycheck_anchor_date = paycheck_cycle.start_date

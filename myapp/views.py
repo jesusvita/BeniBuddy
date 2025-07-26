@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import SignUpForm, TipForm, PayCycleForm, CreateChatRoomForm
-from .models import Tip, PaycheckCycle, ChatRoom
+from .models import Tip, PaycheckCycle, ChatRoom, SavedURL
 from django.contrib.auth.decorators import login_required
 import calendar
 from datetime import date, timedelta, datetime
@@ -405,6 +405,33 @@ def delete_tip(request, tip_id):
 def benihana_qr_view(request):
     """Renders the Benihana QR code page."""
     return render(request, 'myapp/benihanaQR.html')
+
+@login_required
+def url_qr_view(request):
+    """Allow a user to save a URL and display it as a QR code."""
+    saved_obj, _ = SavedURL.objects.get_or_create(user=request.user)
+    qr_image_base64 = None
+
+     # Handle POST requests to save or change the URL
+    if request.method == 'POST':
+        new_url = request.POST.get('url_code', '').strip()
+        saved_obj.url = new_url
+        saved_obj.save()
+        return redirect('url_qr')
+
+    if saved_obj.url:
+        qr = qrcode.QRCode(box_size=10, border=1)
+        qr.add_data(saved_obj.url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        qr_image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    return render(request, 'myapp/url_qr.html', {
+        'saved_url': saved_obj.url,
+        'qr_image_base64': qr_image_base64,
+    })
 
 
 @login_required # Ensure only logged-in users can create rooms to be an admin

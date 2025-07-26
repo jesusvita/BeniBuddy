@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Custom QR Code{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    
+    {% if saved_url %}
+        <div class="flex justify-center my-4">
+            <img src="data:image/png;base64,{{ qr_image_base64 }}" alt="Saved URL QR">
+        </div>
+        <p class="text-center text-gray-300 break-all">{{ saved_url }}</p>
+        <div class="mt-4 text-center">
+            <button type="button" id="change-btn" class="bg-primary text-white font-bold py-2 px-4 rounded block mx-auto">Change URL</button>
+        </div>
+        <form method="post" id="change-form" class="mt-4 hidden">
+            {% csrf_token %}
+            <input type="text" name="url_code" value="{{ saved_url }}" class="w-full p-2 text-black rounded">
+            <button type="submit" name="action" value="save" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-2">Save</button>
+        </form>
+    {% else %}
+        <form method="post" class="bg-neutral-800 p-6 rounded-lg shadow-md space-y-4">
+            {% csrf_token %}
+            <label for="url_code" class="block text-sm font-medium text-gray-300">Enter URL</label>
+            <input type="text" name="url_code" id="url_code" class="w-full p-2 rounded text-black">
+            <button type="submit" name="action" value="save" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">Generate</button>
+        </form>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script>
+  const btn = document.getElementById('change-btn');
+  const form = document.getElementById('change-form');
+  if(btn){
+    btn.addEventListener('click', () => {
+        form.classList.toggle('hidden');
+    });
+  }
+</script>
+{% endblock %}

@@ -88,3 +88,12 @@ class ChatRoom(models.Model):
 
     def get_absolute_url(self):
         return reverse('chat_room', kwargs={'room_id': str(self.room_id)})
+
+class SavedURL(models.Model):
+    """Store a user provided URL for QR code generation."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='saved_url')
+    url = models.URLField(max_length=2048, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.url}" if self.url else f"{self.user.username} - empty"

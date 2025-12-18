@@ -433,6 +433,9 @@ def url_qr_view(request):
         'qr_image_base64': qr_image_base64,
     })
 
+def tip_calculator(request):
+    return render(request, "myapp/tip_calculator.html") 
+
 
 @login_required # Ensure only logged-in users can create rooms to be an admin
 def create_chat_room(request):

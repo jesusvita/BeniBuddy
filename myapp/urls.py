@@ -14,6 +14,7 @@ urlpatterns = [
     path('delete-tip/<int:tip_id>/', views.delete_tip, name='delete_tip'),
     path('benihana-qr/', views.benihana_qr_view, name='benihana_qr'),
     path('url-qr/', views.url_qr_view, name='url_qr'),
+    path('tip-calculator/', views.tip_calculator, name="tip_calculator"),
     path('chat/create/', views.create_chat_room, name='create_chat_room'),
     path('chat/<uuid:room_id>/', views.chat_room_view, name='chat_room'),
-]
+    ]

@@ -9,144 +9,196 @@
   /* ================================
      Remove number input spinners
      ================================ */
-  input[type=number]::-webkit-inner-spin-button,
-  input[type=number]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
 
-  input[type=number] {
+  input[type=text] {
     -moz-appearance: textfield; /* Firefox */
     background-color: #262626;
     border: 1px solid #525252;
     color: #ffffff;
   }
 
-  input[type=number]:focus {
+  input[type=text]:focus {
     outline: none;
     border-color: #7f1d1d;
     box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.4);
   }
+  details > summary::-webkit-details-marker { display: none; }
 </style>
 
 <div class="flex justify-center">
-  <div class="w-full max-w-md border border-white/40 bg-black/40 backdrop-blur-sm rounded-lg p-6">
+  <div
+    class="w-full max-w-md border border-white/40 bg-black/40 backdrop-blur-sm rounded-lg p-6"
+  >
 
     <!-- Header -->
     <div class="text-center mb-6">
-      <h1 class="font-benibuddy text-2xl tracking-widest text-white">Benihana</h1>
+      <img
+        src="https://finditatthemall.com/system/rich/rich_files/rich_files/000/001/848/original/benihana-logo1.png?1470154042"
+        alt="Benihana"
+	class="mx-auto mb-1 h-20 md:h-24 w-auto"
+      />
       <p class="text-sm text-gray-300">Tip-out calculator</p>
     </div>
 
     <!-- Form -->
     <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-4 items-center">
 
-	    <!-- Teppan -->
-	    <label for="teppan" class="text-right text-sm opacity-80">
-		    Teppan
-	    </label>
-	    <div class="flex items-center gap-2">
-		    <span class="opacity-70">$</span>
-		    <input id="teppan" type="number"
-				       class="w-full bg-neutral-800 border border-neutral-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
-				       value="0">
-	    </div>
+      <!-- Teppan -->
+      <label for="teppan" class="text-right text-sm opacity-80">
+        Teppan
+      </label>
+      <div class="flex items-center gap-2">
+        <span class="opacity-70">$</span>
+        <input
+          id="teppan"
+          type="text"
+          value="0"
+          class="w-full bg-neutral-800 border border-neutral-600 rounded px-3 py-2
+                 focus:outline-none focus:ring-2 focus:ring-red-700"
+        />
+      </div>
 
-	    <!-- Sushi -->
-	    <label for="sushi" class="text-right text-sm opacity-80">
-		    Sushi
-	    </label>
-	    <div class="flex items-center gap-2">
-		    <span class="opacity-70">$</span>
-		    <input id="sushi" type="number"
-				      class="w-full bg-neutral-800 border border-neutral-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
-				      value="0">
-	    </div>
+      <!-- Sushi -->
+      <label for="sushi" class="text-right text-sm opacity-80">
+        Sushi
+      </label>
+      <div class="flex items-center gap-2">
+        <span class="opacity-70">$</span>
+        <input
+          id="sushi"
+          type="text"
+          value="0"
+          class="w-full bg-neutral-800 border border-neutral-600 rounded px-3 py-2
+                 focus:outline-none focus:ring-2 focus:ring-red-700"
+        />
+      </div>
 
-	    <!-- Bar -->
-	    <label for="bar" class="text-right text-sm opacity-80">
-		    Bar
-	    </label>
-	    <div class="flex items-center gap-2">
-		    <span class="opacity-70">$</span>
-		    <input id="bar" type="number"
-				    class="w-full bg-neutral-800 border border-neutral-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
-				    value="0">
-	    </div>
+      <!-- Bar -->
+      <label for="bar" class="text-right text-sm opacity-80">
+        Bar
+      </label>
+      <div class="flex items-center gap-2">
+        <span class="opacity-70">$</span>
+        <input
+          id="bar"
+          type="text"
+          value="0"
+          class="w-full bg-neutral-800 border border-neutral-600 rounded px-3 py-2
+                 focus:outline-none focus:ring-2 focus:ring-red-700"
+        />
+      </div>
 
-	    <!-- Tip -->
-	    <label for="tip" class="text-right text-sm opacity-80">
-		    Tip
-	    </label>
-	    <div class="flex items-center gap-2">
-		    <span class="opacity-70">$</span>
-		    <input id="tip" type="number"
-				    class="w-full bg-neutral-800 border border-neutral-600 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-700"
-				    placeholder="optional">
-	    </div>
+      <!-- Tip -->
+      <label for="tip" class="text-right text-sm opacity-80">
+        Tip
+      </label>
+      <div class="flex items-center gap-2">
+        <span class="opacity-70">$</span>
+        <input
+          id="tip"
+          type="text"
+          placeholder="optional"
+          class="w-full bg-neutral-800 border border-neutral-600 rounded px-3 py-2
+                 focus:outline-none focus:ring-2 focus:ring-red-700"
+        />
+      </div>
 
     </div>
 
     <!-- Buttons -->
     <div class="flex justify-center gap-4 mt-6">
-	    <button
-			    type="button"
-			    onclick="calculate()"
-			    class="px-4 py-2 rounded bg-primary text-white hover:opacity-90 transition"
-			    >
-			    Calculate
-	    </button>
+      <button
+        type="button"
+        onclick="saveCalc()"
+        class="px-4 py-2 rounded bg-primary text-white hover:opacity-90 transition"
+      >
+        Save
+      </button>
 
-		    <button
-				    type="button"
-				    id="resetBtn"
-				    class="px-4 py-2 rounded border border-white/40 text-white hover:bg-white/10 transition"
-				    >
-				    Reset
-		    </button>
+      <button
+        type="button"
+        id="resetBtn"
+        class="px-4 py-2 rounded border border-white/40 text-white hover:bg-white/10 transition"
+      >
+        Reset
+      </button>
     </div>
 
-      <!-- Breakdown -->
-      <div class="mt-6 border border-white/40 rounded-lg p-4 bg-black/30">
-        <h2 class="text-sm font-semibold text-gray-100 mb-3">Tip-Out Breakdown</h2>
+    <!-- Breakdown -->
+    <div class="mt-6 border border-white/40 rounded-lg p-4 bg-black/30">
+      <h2 class="text-sm font-semibold text-gray-100 mb-3">
+        Tip-Out Breakdown
+      </h2>
 
-        <div class="space-y-1 text-sm">
-          <div class="flex justify-between"><span class="text-gray-200">Teppan:</span><span id="teppanOut" class="font-semibold transition-all duration-200">$0.00</span></div>
-          <div class="flex justify-between"><span class="text-gray-200">Sushi:</span><span id="sushiOut" class="font-semibold transition-all duration-200">$0.00</span></div>
-          <div class="flex justify-between"><span class="text-gray-200">Bar:</span><span id="barOut" class="font-semibold transition-all duration-200">$0.00</span></div>
-          <div class="flex justify-between"><span class="text-gray-200">Busser:</span><span id="busserOut" class="font-semibold transition-all duration-200">$0.00</span></div>
+      <div class="space-y-1 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-200">Teppan:</span>
+          <span id="teppanOut" class="font-semibold">$0.00</span>
         </div>
-
-        <hr class="my-3 border-white/30">
-
-        <div class="flex justify-between text-sm">
-          <span class="text-gray-200">Total:</span>
-          <span id="totalOut" class="font-semibold transition-all duration-200">$0.00</span>
+        <div class="flex justify-between">
+          <span class="text-gray-200">Sushi:</span>
+          <span id="sushiOut" class="font-semibold">$0.00</span>
         </div>
-
-        <div id="netWrap" class="flex justify-between text-sm mt-2" style="display:none;">
-          <span class="text-gray-200">Net Tips:</span>
-          <span id="netTips" class="font-semibold text-red-300 transition-all duration-200">$0.00</span>
+        <div class="flex justify-between">
+          <span class="text-gray-200">Bar:</span>
+          <span id="barOut" class="font-semibold">$0.00</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-200">Busser:</span>
+          <span id="busserOut" class="font-semibold">$0.00</span>
         </div>
       </div>
 
+      <hr class="my-3 border-white/30">
+
+      <div class="flex justify-between text-sm">
+        <span class="text-gray-200">Total:</span>
+        <span id="totalOut" class="font-semibold">$0.00</span>
+      </div>
+
+      <div
+        id="netWrap"
+        class="flex justify-between text-sm mt-2"
+        style="display: none;"
+      >
+        <span class="text-gray-200">Net Tips:</span>
+        <span id="netTips" class="font-semibold text-red-300">$0.00</span>
+      </div>
     </div>
+    <details class="mt-4 border border-white/40 rounded-lg p-4 bg-black/20">
+	    <summary class="cursor-pointer select-none text-sm font-semibold text-gray-100 hover:opacity-80">
+		     Last 2 Saves
+	    </summary>
+
+	    <div id="lastSaves" class="mt-2 space-y-1 text-sm text-gray-200"></div>
+    </details>
+  </div>
+
+
   </div>
 </div>
 
-<script src="{% static 'myapp/js/tip_calc.js' %}"></script>
+<script src="{% static 'myapp/js/tip_calc.js' %}?v=2"></script>
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
     const resetBtn = document.getElementById("resetBtn");
+
     if (resetBtn) {
       resetBtn.addEventListener("click", () => {
-        ["teppan","sushi","bar"].forEach(id => (document.getElementById(id).value = 0));
+        ["teppan", "sushi", "bar"].forEach(
+          id => (document.getElementById(id).value = 0)
+        );
+
         document.getElementById("tip").value = "";
-        if (typeof calculate === "function") calculate();
+
+        if (typeof calculate === "function") {
+          calculate();
+        }
       });
     }
   });
 </script>
+
 {% endblock %}
 

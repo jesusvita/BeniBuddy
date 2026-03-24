@@ -1,20 +1,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from .forms import SignUpForm, TipForm, PayCycleForm, CreateChatRoomForm
-from .models import Tip, PaycheckCycle, ChatRoom, SavedURL
+from .models import Tip, PaycheckCycle, ChatRoom
 from django.contrib.auth.decorators import login_required
 import calendar
 from datetime import date, timedelta, datetime
 from django.db.models import Sum, DecimalField
-from django.db.models.functions import Coalesce
+from django.db.models.functions import Coalesce, TruncMonth, TruncWeek
 from django.http import JsonResponse, HttpResponseForbidden, Http404, HttpResponse, HttpResponseNotFound
 from django.forms.models import model_to_dict
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.db import models
 import decimal
-import qrcode
-import io
-import base64 # Import the base64 module
+import json
 
 
 
@@ -117,13 +115,11 @@ def user_tips(request, year=None, month=None):
     # Calculate totals for the displayed month - CORRECTED AGGREGATION
     monthly_aggregation = monthly_tips.aggregate(
         total_tip=Coalesce(Sum('amount'), decimal.Decimal('0.00'), output_field=DecimalField()),
-        total_gratuity=Coalesce(Sum('gratuity'), decimal.Decimal('0.00'), output_field=DecimalField()),
-        total_cash=Coalesce(Sum('cash_made'), decimal.Decimal('0.00'), output_field=DecimalField()), # Add cash
-        total_hours=Coalesce(Sum('hours_worked'), decimal.Decimal('0.00'), output_field=DecimalField()) # Add hours
+        total_cash=Coalesce(Sum('cash_made'), decimal.Decimal('0.00'), output_field=DecimalField()),
+        total_hours=Coalesce(Sum('hours_worked'), decimal.Decimal('0.00'), output_field=DecimalField())
     )
     total_monthly_tip = monthly_aggregation['total_tip']
-    total_monthly_gratuity = monthly_aggregation['total_gratuity']
-    total_monthly_cash = monthly_aggregation['total_cash'] 
+    total_monthly_cash = monthly_aggregation['total_cash']
     total_monthly_hours = monthly_aggregation['total_hours']
 
     # Create a dictionary for quick lookup in calendar generation
@@ -147,46 +143,28 @@ def user_tips(request, year=None, month=None):
         weeks.append(week_data)
 
 
-    # --- Paycheck Calculation Logic (Based ONLY on Anchor Date) ---
-    paycheck_cycle, created = PaycheckCycle.objects.get_or_create(user=request.user)
-    paycheck_anchor_date = None # The user's configured start date
-    target_cycle_start_date = None # Start date of the cycle beginning on the anchor date
-    target_cycle_end_date = None   # End date of the cycle beginning on the anchor date
-    paycheck_day_display = None    # The end date to display in the template
-    recent_total_tip = 0.0
-    recent_total_gratuity = 0.0
-    recent_total_cash = decimal.Decimal('0.00') # Add cash
-    recent_total_hours = decimal.Decimal('0.00') # Add hours
-    paycheck_total = 0.0
-    total_overall = 0.0
+    # --- Weekly Tips Calculation ---
+    # Week runs Monday to Sunday
+    current_week_start = today_date - timedelta(days=today_date.weekday())
+    current_week_end = current_week_start + timedelta(days=6)
+    prev_week_start = current_week_start - timedelta(days=7)
+    prev_week_end = current_week_start - timedelta(days=1)
 
-    if paycheck_cycle.start_date and paycheck_cycle.frequency:
-        paycheck_anchor_date = paycheck_cycle.start_date
-        cycle_length = 14 if paycheck_cycle.frequency == PaycheckCycle.PayFrequency.BIWEEKLY else (7 if paycheck_cycle.frequency == PaycheckCycle.PayFrequency.WEEKLY else 0)
-
-        if cycle_length > 0:
-            target_cycle_start_date = paycheck_anchor_date
-            target_cycle_end_date = target_cycle_start_date + timedelta(days=cycle_length - 1)
-            paycheck_day_display = target_cycle_end_date + timedelta(days=5) # Assuming 5 days after cycle end
-
-            recent_tips = Tip.objects.filter(
-                user=request.user,
-                date__date__range=[target_cycle_start_date, target_cycle_end_date]
-            )
-
-            # --- Updated Aggregation for paycheck cycle ---
-            cycle_aggregation = recent_tips.aggregate(
-                total_tip=Coalesce(Sum('amount'), decimal.Decimal('0.00'), output_field=DecimalField()),
-                total_gratuity=Coalesce(Sum('gratuity'), decimal.Decimal('0.00'), output_field=DecimalField()),
-                total_cash=Coalesce(Sum('cash_made'), decimal.Decimal('0.00'), output_field=DecimalField()), # Add cash
-                total_hours=Coalesce(Sum('hours_worked'), decimal.Decimal('0.00'), output_field=DecimalField()) # Add hours
-            )
-            recent_total_tip = cycle_aggregation['total_tip']
-            recent_total_gratuity = cycle_aggregation['total_gratuity']
-            recent_total_cash = cycle_aggregation['total_cash']
-            recent_total_hours = cycle_aggregation['total_hours']
-            paycheck_total = recent_total_tip + recent_total_gratuity
-            total_overall = total_monthly_tip + total_monthly_gratuity + total_monthly_cash 
+    current_week_agg = Tip.objects.filter(
+        user=request.user,
+        date__date__range=[current_week_start, current_week_end]
+    ).aggregate(
+        total=Coalesce(Sum('amount'), decimal.Decimal('0.00'), output_field=DecimalField())
+    )
+    prev_week_agg = Tip.objects.filter(
+        user=request.user,
+        date__date__range=[prev_week_start, prev_week_end]
+    ).aggregate(
+        total=Coalesce(Sum('amount'), decimal.Decimal('0.00'), output_field=DecimalField())
+    )
+    current_week_tips = current_week_agg['total']
+    prev_week_tips = prev_week_agg['total']
+    total_overall = total_monthly_tip + total_monthly_cash
 
 
 
@@ -203,19 +181,70 @@ def user_tips(request, year=None, month=None):
         "next_year": next_year,
         "next_month": next_month,
         "total_monthly_tip": total_monthly_tip,
-        "total_monthly_gratuity": total_monthly_gratuity,
-        "recent_total_tip": recent_total_tip,
-        "recent_total_gratuity": recent_total_gratuity,
-        "paycheck_total": paycheck_total,
-        "paycheck_day": paycheck_day_display, # Use the new variable name for clarity
-        "paycheck_cycle": paycheck_cycle,
         "total_monthly_cash": total_monthly_cash,
-        "recent_total_hours": recent_total_hours,
         "total_overall": total_overall,
+        "current_week_tips": current_week_tips,
+        "prev_week_tips": prev_week_tips,
+        "current_week_start": current_week_start,
+        "prev_week_start": prev_week_start,
+        "today_str": today_date.strftime('%Y-%m-%d'),
         
         
     }
     return render(request, "myapp/user_tips.html", context)
+
+@login_required
+def user_tips_week(request, year=None, month=None, day=None):
+    today_date = date.today()
+
+    if year and month and day:
+        try:
+            ref = date(year, month, day)
+        except ValueError:
+            ref = today_date
+    else:
+        ref = today_date
+
+    # Snap to Monday of that week
+    week_start = ref - timedelta(days=ref.weekday())
+    week_end = week_start + timedelta(days=6)
+    prev_week_start = week_start - timedelta(days=7)
+    next_week_start = week_start + timedelta(days=7)
+
+    week_tips = Tip.objects.filter(
+        user=request.user,
+        date__date__range=[week_start, week_end]
+    ).order_by('date')
+
+    tip_dict = {tip.date.date(): tip for tip in week_tips}
+
+    days = []
+    for i in range(7):
+        day_date = week_start + timedelta(days=i)
+        days.append({
+            'date': day_date,
+            'date_str': day_date.strftime('%Y-%m-%d'),
+            'tip': tip_dict.get(day_date),
+        })
+
+    week_agg = week_tips.aggregate(
+        total_tip=Coalesce(Sum('amount'), decimal.Decimal('0.00'), output_field=DecimalField()),
+        total_cash=Coalesce(Sum('cash_made'), decimal.Decimal('0.00'), output_field=DecimalField()),
+        total_hours=Coalesce(Sum('hours_worked'), decimal.Decimal('0.00'), output_field=DecimalField()),
+    )
+
+    context = {
+        'days': days,
+        'week_start': week_start,
+        'week_end': week_end,
+        'prev_week_start': prev_week_start,
+        'next_week_start': next_week_start,
+        'total_weekly_tip': week_agg['total_tip'],
+        'total_weekly_cash': week_agg['total_cash'],
+        'total_weekly_hours': week_agg['total_hours'],
+        'today_str': today_date.strftime('%Y-%m-%d'),
+    }
+    return render(request, 'myapp/user_tips_week.html', context)
 
 @login_required
 @require_http_methods(["GET", "POST"]) # Allow GET for form display, POST for submission
@@ -251,7 +280,7 @@ def add_tip(request):
             else:
                 # Re-render the full form page with errors
                 # Pass context if your template needs it
-                return render(request, 'myapp/add_tip_form.html', {'form': form})
+                return render(request, 'myapp/add_tip.html', {'form': form})
 
     # Handle GET request (Show the form)
     elif request.method == 'GET':
@@ -273,7 +302,7 @@ def add_tip(request):
              return JsonResponse({'error': 'AJAX GET not fully supported for add form'}, status=405)
         else:
              # Render the full page template
-             return render(request, 'myapp/add_tip_form.html', {'form': form})
+             return render(request, 'myapp/add_tip.html', {'form': form})
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -320,13 +349,12 @@ def edit_tip(request, tip_id):
         if is_ajax:
             # *** MODIFIED: Include cash_made and hours_worked in JSON ***
             tip_data = model_to_dict(tip, fields=[
-                'id', 'amount', 'gratuity', 'date', 'note',
-                'cash_made', 'hours_worked' # Add the new fields here
+                'id', 'amount', 'date', 'note',
+                'cash_made', 'hours_worked'
             ])
 
             # Convert Decimals to strings for JSON compatibility
             tip_data['amount'] = str(tip_data['amount'])
-            tip_data['gratuity'] = str(tip_data['gratuity']) if tip_data['gratuity'] is not None else '0.00'
             tip_data['cash_made'] = str(tip_data['cash_made']) if tip_data['cash_made'] is not None else '0.00'
             tip_data['hours_worked'] = str(tip_data['hours_worked']) if tip_data['hours_worked'] is not None else '0.00'
 
@@ -402,39 +430,46 @@ def delete_tip(request, tip_id):
     # Fallback for unexpected methods (though require_http_methods should prevent this)
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'}, status=405)
 
-def benihana_qr_view(request):
-    """Renders the Benihana QR code page."""
-    return render(request, 'myapp/benihanaQR.html')
-
-@login_required
-def url_qr_view(request):
-    """Allow a user to save a URL and display it as a QR code."""
-    saved_obj, _ = SavedURL.objects.get_or_create(user=request.user)
-    qr_image_base64 = None
-
-     # Handle POST requests to save or change the URL
-    if request.method == 'POST':
-        new_url = request.POST.get('url_code', '').strip()
-        saved_obj.url = new_url
-        saved_obj.save()
-        return redirect('url_qr')
-
-    if saved_obj.url:
-        qr = qrcode.QRCode(box_size=10, border=1)
-        qr.add_data(saved_obj.url)
-        qr.make(fit=True)
-        img = qr.make_image(fill_color="black", back_color="white")
-        buf = io.BytesIO()
-        img.save(buf, format='PNG')
-        qr_image_base64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-
-    return render(request, 'myapp/url_qr.html', {
-        'saved_url': saved_obj.url,
-        'qr_image_base64': qr_image_base64,
-    })
 
 def tip_calculator(request):
-    return render(request, "myapp/tip_calculator.html") 
+    return render(request, "myapp/tip_calculator.html")
+
+@login_required
+def charts(request):
+    today_date = date.today()
+    two_years_ago = today_date.replace(day=1, year=today_date.year - 2)
+    one_year_ago  = today_date - timedelta(weeks=52)
+
+    monthly_qs = (
+        Tip.objects.filter(user=request.user, date__date__gte=two_years_ago)
+        .annotate(period=TruncMonth('date'))
+        .values('period')
+        .annotate(tips=Sum('amount'), cash=Sum('cash_made'))
+        .order_by('period')
+    )
+
+    weekly_qs = (
+        Tip.objects.filter(user=request.user, date__date__gte=one_year_ago)
+        .annotate(period=TruncWeek('date'))
+        .values('period')
+        .annotate(tips=Sum('amount'), cash=Sum('cash_made'))
+        .order_by('period')
+    )
+
+    monthly_data = [
+        {'label': d['period'].strftime('%b %Y'), 'tips': float(d['tips'] or 0), 'cash': float(d['cash'] or 0)}
+        for d in monthly_qs
+    ]
+    weekly_data = [
+        {'label': d['period'].strftime('%b %d'), 'tips': float(d['tips'] or 0), 'cash': float(d['cash'] or 0)}
+        for d in weekly_qs
+    ]
+
+    context = {
+        'monthly_data': json.dumps(monthly_data),
+        'weekly_data':  json.dumps(weekly_data),
+    }
+    return render(request, 'myapp/charts.html', context)
 
 
 @login_required # Ensure only logged-in users can create rooms to be an admin

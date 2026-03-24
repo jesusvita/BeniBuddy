@@ -1,28 +1,30 @@
 {% extends 'base.html' %}
-{% block title %}Your Tips - {{ month_name }} {{ year }}{% endblock %}
+{% block title %}Your Tips - Week of {{ week_start|date:"M d" }}{% endblock %}
 
 {% block content %}
 <div class="rounded min-h-screen px-1 py-6 bg-gradient-to-b from-neutral-950 to-stone-900 text-white">
-
-  <!-- Header Navigation -->
   <div class="px-4 sm:px-8 mb-4">
+
     <!-- View Toggle -->
     <div class="flex justify-center mb-3">
       <div class="inline-flex rounded-full bg-white/10 p-1 text-sm font-semibold">
-        <span class="px-4 py-1 rounded-full bg-[#880808] text-white">Monthly</span>
-        <a href="{% url 'user_tips_week' %}" class="px-4 py-1 rounded-full text-gray-300 hover:text-white transition">Weekly</a>
+        <a href="{% url 'user_tips' %}" class="px-4 py-1 rounded-full text-gray-300 hover:text-white transition">Monthly</a>
+        <span class="px-4 py-1 rounded-full bg-[#880808] text-white">Weekly</span>
       </div>
     </div>
 
-    <div class="flex justify-between items-center gap-2">
-      <a href="{% url 'user_tips' prev_year prev_month %}"
+    <!-- Week Navigation -->
+    <div class="flex justify-between items-center gap-2 mb-4">
+      <a href="{% url 'user_tips_week' prev_week_start.year prev_week_start.month prev_week_start.day %}"
          class="font-semibold py-0.5 px-2 sm:py-1 sm:px-4 rounded-full shadow transition hover:bg-red-900"
          style="background-color: #880808;">
         <span class="hidden sm:inline">← Previous</span>
         <span class="inline sm:hidden">←</span>
       </a>
-      <h2 class="text-2xl font-bold text-white text-center">{{ month_name }} {{ year }}</h2>
-      <a href="{% url 'user_tips' next_year next_month %}"
+      <h2 class="text-xl font-bold text-white text-center">
+        {{ week_start|date:"M d" }} – {{ week_end|date:"M d, Y" }}
+      </h2>
+      <a href="{% url 'user_tips_week' next_week_start.year next_week_start.month next_week_start.day %}"
          class="font-semibold py-0.5 px-2 sm:py-1 sm:px-4 rounded-full shadow transition hover:bg-red-900"
          style="background-color: #880808;">
         <span class="hidden sm:inline">Next →</span>
@@ -30,84 +32,69 @@
       </a>
     </div>
 
-    <!-- Weekday Labels -->
-    <div class="grid grid-cols-7 text-center font-semibold text-[#93A8AC] mt-4 mb-2 text-xs sm:text-sm">
-      <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div>
-      <div>Thu</div><div>Fri</div><div>Sat</div>
-    </div>
+    <!-- Day Cards -->
+    <div id="calendarGrid" class="flex flex-col gap-2">
+      {% for day in days %}
+        {% if day.tip %}
+          <a href="{% url 'edit_tip' day.tip.id %}"
+             data-tip-id="{{ day.tip.id }}"
+             class="edit-tip-button flex items-center justify-between rounded-xl px-4 py-3 shadow transition cursor-pointer border-l-4 border-green-400
+               {% if day.date_str == today_str %} ring-2 ring-[#880808] bg-gray-50 hover:bg-gray-100 {% else %} bg-white hover:bg-gray-100 {% endif %} text-gray-800">
+        {% else %}
+          <a href="{% url 'add_tip' %}?date={{ day.date_str }}"
+             data-date="{{ day.date_str }}"
+             class="add-tip-button flex items-center justify-between rounded-xl px-4 py-3 shadow transition cursor-pointer
+               {% if day.date_str == today_str %} ring-2 ring-[#880808] bg-gray-50 hover:bg-gray-100 {% else %} bg-white/10 hover:bg-white/20 {% endif %}">
+        {% endif %}
 
-    <!-- Calendar Grid -->
-    <div id="calendarGrid" class="grid grid-cols-7 gap-x-1 gap-y-2 md:gap-2">
-      {% for week in weeks %}
-        {% for day in week %}
-          <div class="relative transition-transform duration-150 hover:scale-[1.03]">
-            {% if day %}
-              {% if day.tip %}
-                <a href="{% url 'edit_tip' day.tip.id %}"
-                  data-tip-id="{{ day.tip.id }}"
-                  class="edit-tip-button block h-16 sm:h-20 rounded-lg shadow transition cursor-pointer border-l-2 border-green-400 text-gray-700
-                    {% if day.date == today_str %} ring-2 ring-[#880808] bg-gray-50 {% else %} bg-white hover:bg-gray-100 {% endif %}">
-              {% else %}
-                <a href="{% url 'add_tip' %}?date={{ year }}-{{ month|stringformat:'02d' }}-{{ day.day|stringformat:'02d' }}"
-                   data-date="{{ year }}-{{ month|stringformat:'02d' }}-{{ day.day|stringformat:'02d' }}"
-                   class="add-tip-button block h-16 sm:h-20 rounded-lg shadow transition cursor-pointer text-gray-700
-                    {% if day.date == today_str %} ring-2 ring-[#880808] bg-gray-50 hover:bg-gray-100 {% else %} bg-white/90 hover:bg-white {% endif %}">
-              {% endif %}
-                  <!-- Date Number -->
-                  <div class="px-1 pt-0.5 text-[0.6rem] sm:text-xs font-bold
-                    {% if day.date == today_str %} text-[#880808] {% else %} text-gray-500 {% endif %}">
-                    {{ day.day }}
-                  </div>
-                  <!-- Tip Info -->
-                  <div class="flex flex-col items-end px-1 pb-1 gap-0.5">
-                    {% if day.tip %}
-                      <div class="font-bold text-green-700 text-[0.55rem] sm:text-xs tabular-nums leading-tight">
-                        ${{ day.tip.amount }}
-                      </div>
-                      {% if day.tip.cash_made > 0 %}
-                        <div class="font-semibold text-yellow-600 text-[0.5rem] sm:text-[0.6rem] tabular-nums leading-tight">
-                          ${{ day.tip.cash_made }}
-                        </div>
-                      {% endif %}
-                      {% if day.tip.hours_worked > 0 %}
-                        <div class="font-semibold text-purple-600 text-[0.45rem] sm:text-[0.55rem] tabular-nums leading-tight">
-                          {{ day.tip.hours_worked }}h
-                        </div>
-                      {% endif %}
-                    {% endif %}
-                  </div>
-                </a>
-            {% else %}
-              <div class="h-16 sm:h-20 rounded-lg bg-white/5"></div>
-            {% endif %}
+          <!-- Day label -->
+          <div class="flex flex-col min-w-[80px]">
+            <span class="font-bold text-sm {% if day.date_str == today_str %} text-[#880808] {% elif day.tip %} text-gray-800 {% else %} text-gray-300 {% endif %}">
+              {{ day.date|date:"l" }}
+            </span>
+            <span class="text-xs {% if day.tip %} text-gray-500 {% else %} text-gray-400 {% endif %}">
+              {{ day.date|date:"M d" }}
+            </span>
           </div>
-        {% endfor %}
+
+          <!-- Tip data -->
+          {% if day.tip %}
+            <div class="flex gap-4 items-center">
+              <div class="text-right">
+                <div class="text-xs text-gray-400 font-medium">Tips</div>
+                <div class="text-green-700 font-bold text-sm">${{ day.tip.amount }}</div>
+              </div>
+              {% if day.tip.cash_made > 0 %}
+                <div class="text-right">
+                  <div class="text-xs text-gray-400 font-medium">Cash</div>
+                  <div class="text-yellow-600 font-bold text-sm">${{ day.tip.cash_made }}</div>
+                </div>
+              {% endif %}
+              {% if day.tip.hours_worked > 0 %}
+                <div class="text-right">
+                  <div class="text-xs text-gray-400 font-medium">Hours</div>
+                  <div class="text-purple-600 font-bold text-sm">{{ day.tip.hours_worked }}h</div>
+                </div>
+              {% endif %}
+            </div>
+          {% else %}
+            <span class="text-xs text-gray-400 italic">No entry</span>
+          {% endif %}
+        </a>
       {% endfor %}
     </div>
 
-    <!-- Monthly Totals -->
+    <!-- Weekly Totals -->
     <div class="mt-5 flex flex-wrap justify-center gap-2">
       <span class="inline-flex items-center bg-green-900/50 text-green-300 font-semibold text-sm px-3 py-1 rounded-full">
-        Tips&nbsp;${{ total_monthly_tip|floatformat:2 }}
+        Tips&nbsp;${{ total_weekly_tip|floatformat:2 }}
       </span>
       <span class="inline-flex items-center bg-yellow-900/50 text-yellow-300 font-semibold text-sm px-3 py-1 rounded-full">
-        Cash&nbsp;${{ total_monthly_cash|floatformat:2 }}
+        Cash&nbsp;${{ total_weekly_cash|floatformat:2 }}
       </span>
-      <span class="inline-flex items-center bg-orange-900/50 text-orange-300 font-bold text-sm px-3 py-1 rounded-full">
-        Total&nbsp;${{ total_overall|floatformat:2 }}
+      <span class="inline-flex items-center bg-purple-900/50 text-purple-300 font-semibold text-sm px-3 py-1 rounded-full">
+        Hours&nbsp;{{ total_weekly_hours|floatformat:2 }}
       </span>
-    </div>
-
-    <!-- Weekly Tips -->
-    <div class="mt-4 grid grid-cols-2 gap-3">
-      <div class="bg-white/10 rounded-xl p-3 border border-white/10">
-        <p class="text-[0.65rem] sm:text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">This week ({{ current_week_start|date:"m/d" }})</p>
-        <p class="text-green-400 font-bold text-lg sm:text-xl">${{ current_week_tips|floatformat:2 }}</p>
-      </div>
-      <div class="bg-white/10 rounded-xl p-3 border border-white/10">
-        <p class="text-[0.65rem] sm:text-xs text-gray-400 font-semibold uppercase tracking-wide mb-1">Last week ({{ prev_week_start|date:"m/d" }})</p>
-        <p class="text-gray-300 font-bold text-lg sm:text-xl">${{ prev_week_tips|floatformat:2 }}</p>
-      </div>
     </div>
 
     <!-- Support Button -->
@@ -222,29 +209,6 @@
       <div class="mt-6 flex justify-end">
         <button type="button" id="cancelAddNewShiftBtn" class="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
         <button type="submit" id="saveNewShiftBtn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">Add Shift</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Edit Pay Cycle Modal -->
-<div id="editPayCycleModal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center p-4 hidden z-50">
-  <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md text-gray-800">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="text-xl font-semibold">Set Pay Cycle</h3>
-      <button id="closePayCycleModalBtn" type="button" class="text-gray-500 hover:text-gray-800">&times;</button>
-    </div>
-    <form id="editPayCycleForm" method="POST" action="{% url 'set_pay_cycle' %}">
-      {% csrf_token %}
-      <div class="mb-4">
-        <label for="payCycleStartDate" class="block text-sm font-medium text-gray-700">Pay Cycle Start Date</label>
-        <input type="date" name="start_date" id="payCycleStartDate" required
-            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-        <p class="mt-1 text-xs text-gray-500">Select the starting date of your pay cycle.</p>
-      </div>
-      <div class="mt-6 flex justify-end">
-        <button type="button" id="cancelPayCycleModalBtn" class="mr-2 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-        <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-800 hover:bg-red-900">Save Settings</button>
       </div>
     </form>
   </div>

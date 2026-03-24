@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% block title %}Charts - BeniBuddy{% endblock %}
+
+{% block content %}
+<div class="min-h-screen px-4 py-6 bg-gradient-to-b from-neutral-950 to-stone-900 text-white">
+
+  <h1 class="text-2xl font-bold mb-6 text-center">Performance</h1>
+
+  <!-- Controls -->
+  <div class="flex flex-col gap-3 mb-6">
+
+    <!-- View toggle: Monthly / Weekly -->
+    <div class="flex justify-center">
+      <div class="inline-flex rounded-full bg-white/10 p-1 text-sm font-semibold">
+        <button id="btn-monthly" onclick="setView('monthly')"
+          class="px-4 py-1 rounded-full transition">Monthly</button>
+        <button id="btn-weekly" onclick="setView('weekly')"
+          class="px-4 py-1 rounded-full transition">Weekly</button>
+      </div>
+    </div>
+
+    <!-- Range selector -->
+    <div class="flex justify-center flex-wrap gap-2" id="range-controls"></div>
+
+    <!-- Combined toggle -->
+    <div class="flex justify-center">
+      <div class="inline-flex rounded-full bg-white/10 p-1 text-sm font-semibold">
+        <button id="btn-separate" onclick="setCombine(false)"
+          class="px-4 py-1 rounded-full transition">Separate</button>
+        <button id="btn-combined" onclick="setCombine(true)"
+          class="px-4 py-1 rounded-full transition">Combined</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="bg-white/10 border border-white/10 rounded-2xl p-4">
+    <p id="chart-title" class="text-sm text-gray-400 font-semibold uppercase tracking-wide mb-4"></p>
+    <div class="relative h-72">
+      <canvas id="mainChart"></canvas>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block javascript %}
+{{ block.super }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const MONTHLY_DATA = {{ monthly_data|safe }};
+  const WEEKLY_DATA  = {{ weekly_data|safe }};
+
+  const MONTHLY_RANGES = [
+    { label: '3 Months',  value: 3 },
+    { label: '6 Months',  value: 6 },
+    { label: '12 Months', value: 12 },
+    { label: 'All',       value: 999 },
+  ];
+  const WEEKLY_RANGES = [
+    { label: '4 Weeks',  value: 4 },
+    { label: '8 Weeks',  value: 8 },
+    { label: '12 Weeks', value: 12 },
+    { label: '26 Weeks', value: 26 },
+    { label: 'All',      value: 999 },
+  ];
+
+  let currentView    = 'monthly';
+  let currentRange   = 6;
+  let currentCombine = false;
+
+  // --- Chart setup ---
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  const chart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: [], datasets: [] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#d1d5db' } },
+        tooltip: {
+          callbacks: {
+            label: c => ` $${c.parsed.y.toFixed(2)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#9ca3af' },
+          grid:  { color: 'rgba(255,255,255,0.05)' }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: '#9ca3af', callback: v => `$${v}` },
+          grid:  { color: 'rgba(255,255,255,0.05)' }
+        }
+      }
+    }
+  });
+
+  function updateChart() {
+    const data   = currentView === 'monthly' ? MONTHLY_DATA : WEEKLY_DATA;
+    const sliced = data.slice(-currentRange);
+    const labels = sliced.map(d => d.label);
+
+    let datasets;
+    if (currentCombine) {
+      datasets = [{
+        label: 'Total Earned',
+        data: sliced.map(d => +(d.tips + d.cash).toFixed(2)),
+        backgroundColor: 'rgba(251, 146, 60, 0.7)',
+        borderColor: 'rgba(251, 146, 60, 1)',
+        borderWidth: 1,
+        borderRadius: 4,
+      }];
+    } else {
+      datasets = [
+        {
+          label: 'Tips',
+          data: sliced.map(d => d.tips),
+          backgroundColor: 'rgba(74, 222, 128, 0.7)',
+          borderColor: 'rgba(74, 222, 128, 1)',
+          borderWidth: 1,
+          borderRadius: 4,
+        },
+        {
+          label: 'Cash',
+          data: sliced.map(d => d.cash),
+          backgroundColor: 'rgba(250, 204, 21, 0.7)',
+          borderColor: 'rgba(250, 204, 21, 1)',
+          borderWidth: 1,
+          borderRadius: 4,
+        }
+      ];
+    }
+
+    chart.data.labels   = labels;
+    chart.data.datasets = datasets;
+    chart.update();
+
+    // Update title
+    const rangeLabel = (currentView === 'monthly' ? MONTHLY_RANGES : WEEKLY_RANGES)
+      .find(r => r.value === currentRange)?.label || '';
+    document.getElementById('chart-title').textContent =
+      `${currentView === 'monthly' ? 'Monthly' : 'Weekly'} · ${rangeLabel} · ${currentCombine ? 'Combined' : 'Separate'}`;
+  }
+
+  function setView(view) {
+    currentView = view;
+    // Reset range to a sensible default for the new view
+    currentRange = view === 'monthly' ? 6 : 12;
+    renderRangeButtons();
+    updateActiveButtons();
+    updateChart();
+  }
+
+  function setRange(range) {
+    currentRange = range;
+    updateActiveButtons();
+    updateChart();
+  }
+
+  function setCombine(val) {
+    currentCombine = val;
+    updateActiveButtons();
+    updateChart();
+  }
+
+  function renderRangeButtons() {
+    const ranges = currentView === 'monthly' ? MONTHLY_RANGES : WEEKLY_RANGES;
+    const container = document.getElementById('range-controls');
+    container.innerHTML = '';
+    ranges.forEach(r => {
+      const btn = document.createElement('button');
+      btn.id = `btn-range-${r.value}`;
+      btn.textContent = r.label;
+      btn.onclick = () => setRange(r.value);
+      btn.className = 'px-3 py-1 rounded-full text-sm font-semibold bg-white/10 text-gray-300 transition hover:bg-white/20';
+      container.appendChild(btn);
+    });
+  }
+
+  function updateActiveButtons() {
+    const active   = 'bg-[#880808] text-white';
+    const inactive = 'bg-white/10 text-gray-300 hover:bg-white/20';
+
+    // View toggle
+    document.getElementById('btn-monthly').className = `px-4 py-1 rounded-full transition ${currentView === 'monthly' ? active : inactive}`;
+    document.getElementById('btn-weekly').className  = `px-4 py-1 rounded-full transition ${currentView === 'weekly'  ? active : inactive}`;
+
+    // Range buttons
+    const ranges = currentView === 'monthly' ? MONTHLY_RANGES : WEEKLY_RANGES;
+    ranges.forEach(r => {
+      const btn = document.getElementById(`btn-range-${r.value}`);
+      if (btn) btn.className = `px-3 py-1 rounded-full text-sm font-semibold transition ${currentRange === r.value ? active : inactive}`;
+    });
+
+    // Combine toggle
+    document.getElementById('btn-separate').className = `px-4 py-1 rounded-full transition ${!currentCombine ? active : inactive}`;
+    document.getElementById('btn-combined').className = `px-4 py-1 rounded-full transition ${currentCombine  ? active : inactive}`;
+  }
+
+  // Init
+  renderRangeButtons();
+  updateActiveButtons();
+  updateChart();
+</script>
+{% endblock %}

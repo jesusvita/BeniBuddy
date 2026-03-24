@@ -49,17 +49,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- START: Default empty numeric inputs to 0 ---
         const amountInput = document.getElementById('modalTipAmount');
-        const gratuityInput = document.getElementById('modalTipGratuity');
         const cashMadeInput = document.getElementById('modalCashMade');
         const hoursWorkedInput = document.getElementById('modalHoursWorked');
 
         // Amount is required, but this handles if it's somehow submitted empty
         if (amountInput && amountInput.value.trim() === '') {
             amountInput.value = '0';
-        }
-        // Gratuity, Cash, and Hours are often optional, so default them if empty
-        if (gratuityInput && gratuityInput.value.trim() === '') {
-            gratuityInput.value = '0';
         }
         if (cashMadeInput && cashMadeInput.value.trim() === '') {
             cashMadeInput.value = '0';
@@ -141,7 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const editTipForm = document.getElementById('editTipForm');
     const editModalTipDateInput = document.getElementById('editModalTipDate');
     const editModalTipAmountInput = document.getElementById('editModalTipAmount');
-    const editModalTipGratuityInput = document.getElementById('editModalTipGratuity');
     const editModalTipNoteInput = document.getElementById('editModalTipNote');
     const deleteTipLink = document.getElementById('deleteTipLink');
     // START: Get new edit form inputs
@@ -155,7 +149,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelAddNewShiftBtn = document.getElementById('cancelAddNewShiftBtn');
     const addNewShiftForm = document.getElementById('addNewShiftForm');
     const newShiftAmountInput = document.getElementById('newShiftAmount');
-    const newShiftGratuityInput = document.getElementById('newShiftGratuity');
     const newShiftCashMadeInput = document.getElementById('newShiftCashMade');
     const newShiftHoursWorkedInput = document.getElementById('newShiftHoursWorked');
     const newShiftNoteInput = document.getElementById('newShiftNote');
@@ -177,7 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         editModalTipDateInput.value = datePart;
         editModalTipAmountInput.value = tipData.amount;
-        editModalTipGratuityInput.value = tipData.gratuity != null ? tipData.gratuity : ''; 
 
         // START: Populate new fields
         // Ensure your backend view sends these fields in the JSON response!
@@ -356,13 +348,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = editTipForm.action; // Use the same URL as edit
 
             const additionalAmount = parseFloat(newShiftAmountInput.value) || 0;
-            const additionalGratuity = parseFloat(newShiftGratuityInput.value) || 0;
             const additionalCash = parseFloat(newShiftCashMadeInput.value) || 0;
             const additionalHours = parseFloat(newShiftHoursWorkedInput.value) || 0;
             const additionalNote = newShiftNoteInput.value.trim();
             
             const totalAmount = (parseFloat(originalEditTipData.amount) || 0) + additionalAmount;
-            const totalGratuity = (parseFloat(originalEditTipData.gratuity) || 0) + additionalGratuity;
             const totalCash = (parseFloat(originalEditTipData.cash_made) || 0) + additionalCash;
             const totalHours = (parseFloat(originalEditTipData.hours_worked) || 0) + additionalHours;
 
@@ -380,7 +370,6 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('csrfmiddlewaretoken', csrfToken); // Add CSRF token to FormData
             formData.append('date', date);
             formData.append('amount', totalAmount.toFixed(2));
-            formData.append('gratuity', totalGratuity.toFixed(2));
             formData.append('cash_made', totalCash.toFixed(2));
             formData.append('hours_worked', totalHours.toFixed(2));
             formData.append('note', combinedNote);
@@ -548,7 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Event Delegation on Calendar Grid (Handles BOTH Add and Edit) ---
-    const calendarGrid = document.querySelector('.grid.grid-cols-7.sm\\:grid-cols-7');
+    const calendarGrid = document.getElementById('calendarGrid');
     if (calendarGrid) {
         calendarGrid.addEventListener('click', (event) => {
             const addButton = event.target.closest('.add-tip-button');
@@ -629,8 +618,6 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault(); // Prevent any default button action
             openPayCycleModal();
         });
-    } else {
-        console.error('Open Pay Cycle Modal button not found.');
     }
 
     if (closePayCycleBtn) {
